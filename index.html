@@ -1,0 +1,1173 @@
+<!DOCTYPE html>
+<html lang="id">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Nurfitri Makeup Client - Sistem Manajemen Klien & Vendor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css" rel="stylesheet">
+    
+    <style>
+        :root {
+            --primary-color: #6f42c1;
+            --secondary-color: #f8f9fa;
+        }
+        body {
+            background-color: #f4f6f9;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        .navbar-brand {
+            font-weight: 700;
+            letter-spacing: 1px;
+        }
+        .card {
+            border: none;
+            border-radius: 12px;
+            box-shadow: 0 4px 12px rgba(0,0,0,0.05);
+            margin-bottom: 24px;
+        }
+        .card-header {
+            border-top-left-radius: 12px !important;
+            border-top-right-radius: 12px !important;
+            font-weight: 600;
+        }
+        .nav-tabs .nav-link {
+            border: none;
+            color: #495057;
+            font-weight: 500;
+            padding: 12px 20px;
+        }
+        .nav-tabs .nav-link.active {
+            color: var(--primary-color);
+            border-bottom: 3px solid var(--primary-color);
+            background: transparent;
+        }
+        .loading-overlay {
+            position: fixed;
+            top: 0; left: 0; width: 100%; height: 100%;
+            background: rgba(255,255,255,0.8);
+            z-index: 9999;
+            display: flex;
+            justify-content: center;
+            align-items: center;
+        }
+        
+        /* --- CSS ATURAN CETAK INVOICE --- */
+        @media print {
+            .no-print {
+                display: none !important;
+            }
+            .print-only {
+                display: block !important;
+            }
+            body {
+                background: white;
+                color: black;
+            }
+            .card-print {
+                box-shadow: none;
+                border: 1px solid #ddd;
+            }
+        }
+        @media screen {
+            .print-only {
+                display: none !important;
+            }
+        }
+    </style>
+</head>
+<body>
+
+    <div id="loadingOverlay" class="loading-overlay d-none">
+        <div class="text-center">
+            <div class="spinner-border text-primary" role="status"></div>
+            <div class="mt-2 fw-bold">Memproses Data...</div>
+        </div>
+    </div>
+
+    <div id="invoicePrintView" class="print-only container my-4">
+        <div class="text-center mb-4">
+            <h2>INVOICE PEMBAYARAN</h2>
+            <h4 class="text-muted">NURFITRI MAKEUP</h4>
+            <hr>
+        </div>
+        <div class="row mb-4">
+            <div class="col-6">
+                <strong>Kepada Yth Klien:</strong>
+                <p id="invNama" class="fs-5 fw-bold">-</p>
+                <strong>Alamat Acara:</strong>
+                <p id="invAlamat">-</p>
+            </div>
+            <div class="col-6 text-end">
+                <strong>Tanggal Acara:</strong>
+                <p id="invTanggal">-</p>
+                <strong>Paket Terpilih:</strong>
+                <p id="invPaket" class="fw-bold text-primary">-</p>
+            </div>
+        </div>
+        <table class="table table-bordered">
+            <thead class="table-light">
+                <tr>
+                    <th>Deskripsi Rincian</th>
+                    <th class="text-end">Jumlah</th>
+                </tr>
+            </thead>
+            <tbody>
+                <tr>
+                    <td>Biaya Paket Utama MUA</td>
+                    <td id="invHarga" class="text-end">Rp 0</td>
+                </tr>
+                <tr>
+                    <td>Biaya Transportasi Operasional</td>
+                    <td id="invTransport" class="text-end">Rp 0</td>
+                </tr>
+                <tr class="fw-bold">
+                    <td>Total Tagihan</td>
+                    <td id="invTotal" class="text-end">Rp 0</td>
+                </tr>
+                <tr class="text-success">
+                    <td>Uang Muka / DP Berhasil Dibayar</td>
+                    <td id="invDP" class="text-end">- Rp 0</td>
+                </tr>
+                <tr class="table-warning fw-bold fs-5 text-danger">
+                    <td>Sisa Pembayaran / Pelunasan</td>
+                    <td id="invSisa" class="text-end">Rp 0</td>
+                </tr>
+            </tbody>
+        </table>
+        <div class="mt-5 row">
+            <div class="col-6 text-center">
+                <p>Klien Menyetujui,</p>
+                <br><br><br>
+                <p>( _______________________ )</p>
+            </div>
+            <div class="col-6 text-center">
+                <p>Hormat Kami, Nurfitri Makeup</p>
+                <br><br><br>
+                <p>( _______________________ )</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="no-print">
+        <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
+            <div class="container">
+                <a class="navbar-brand" href="#"><i class="fa-solid fa-wand-magic-sparkles me-2"></i>NURFITRI MAKEUP</a>
+            </div>
+        </nav>
+
+        <div class="container my-4">
+            <ul class="nav nav-tabs mb-4" id="muaTabs" role="tablist">
+                <li class="nav-item">
+                    <button class="nav-link" id="klien-tab" data-bs-toggle="tab" data-bs-target="#klien-pane" type="button" onclick="checkKlienTabAccess(event)"><i class="fa-solid fa-users me-2"></i>Data Klien</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="vendor-tab" data-bs-toggle="tab" data-bs-target="#vendor-pane" type="button"><i class="fa-solid fa-handshake me-2"></i>Manajemen Vendor</button>
+                </li>
+                <li class="nav-item">
+                    <button class="nav-link active" id="attire-tab" data-bs-toggle="tab" data-bs-target="#attire-pane" type="button"><i class="fa-solid fa-shirt me-2"></i>Checklist Attire</button>
+                </li>
+            </ul>
+
+            <div class="tab-content" id="muaTabsContent">
+                
+                <div class="tab-pane fade" id="klien-pane" role="tabpanel">
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white" id="formKlienHeader">Input Data Klien</div>
+                                <div class="card-body">
+                                    <form id="klienForm">
+                                        <input type="hidden" id="klienId">
+                                        <div class="mb-2">
+                                            <label class="form-label font-size-sm">Nama Klien</label>
+                                            <input type="text" id="klienNama" class="form-control form-control-sm" required>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Alamat</label>
+                                            <textarea id="klienAlamat" class="form-control form-control-sm" rows="2" required></textarea>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">No Whatsapp</label>
+                                            <input type="text" id="klienWa" class="form-control form-control-sm" placeholder="Contoh: 08123456789" required>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Tanggal Acara</label>
+                                            <input type="date" id="klienTanggal" class="form-control form-control-sm" required>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">Paket</label>
+                                            <input type="text" id="klienPaket" class="form-control form-control-sm" placeholder="Contoh: Premium Wedding" required>
+                                        </div>
+                                        <div class="row">
+                                            <div class="col-6 mb-2">
+                                                <label class="form-label">Harga (Rp)</label>
+                                                <input type="number" id="klienHarga" class="form-control form-control-sm" required>
+                                            </div>
+                                            <div class="col-6 mb-2">
+                                                <label class="form-label">Transport (Rp)</label>
+                                                <input type="number" id="klienTransport" class="form-control form-control-sm" required>
+                                            </div>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label">DP Awal (Rp)</label>
+                                            <input type="number" id="klienDp" class="form-control form-control-sm" required>
+                                        </div>
+                                        <div class="mb-2">
+                                            <label class="form-label text-primary fw-bold">Pilih Vendor Terlibat</label>
+                                            <div id="vendorCheckboxesContainer" class="border p-2 rounded bg-light" style="max-height: 120px; overflow-y: auto;">
+                                                <span class="text-muted d-block small">Belum ada vendor terinput</span>
+                                            </div>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Catatan Tambahan</label>
+                                            <textarea id="klienCatatan" class="form-control form-control-sm" rows="2"></textarea>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary btn-sm flex-grow-1" id="btnSubmitKlien">Simpan Klien</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="btnBatalKlien" onclick="resetFormKlien()">Batal</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-8">
+                            <div class="card mb-3 border-warning bg-warning bg-opacity-10 shadow-sm">
+                                <div class="card-header bg-warning text-dark d-flex align-items-center py-2">
+                                    <i class="fa-solid fa-bell animate-bounce me-2"></i>
+                                    <span class="fw-bold small">Pengingat: 5 Jadwal Terdekat Mendatang</span>
+                                </div>
+                                <div class="card-body p-2" id="klienPengingatContainer">
+                                    <span class="text-muted small px-2">Memeriksa jadwal terdekat...</span>
+                                </div>
+                            </div>
+
+                            <div class="card">
+                                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <span>Daftar Klien Terjadwal (Berdasarkan Tanggal Terdekat)</span>
+                                    <div class="input-group input-group-sm" style="max-width: 250px;">
+                                        <span class="input-group-text bg-light border-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                                        <input type="text" id="searchKlienInput" class="form-control border-0" placeholder="Cari nama / paket..." onkeyup="searchKlienTable()">
+                                    </div>
+                                </div>
+                                <div class="card-body p-0 table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Nama Klien</th>
+                                                <th>Tanggal</th>
+                                                <th>Paket</th>
+                                                <th>Sisa Bayar</th>
+                                                <th class="text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="klienTableBody">
+                                            <tr>
+                                                <td colspan="5" class="text-center p-4 text-muted">Sedang sinkronisasi data dari Google Sheets...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade" id="vendor-pane" role="tabpanel">
+                    <div class="row">
+                        <div class="col-lg-4">
+                            <div class="card">
+                                <div class="card-header bg-success text-white" id="formVendorHeader">Tambah Data Vendor</div>
+                                <div class="card-body">
+                                    <form id="vendorForm">
+                                        <input type="hidden" id="vendorId">
+                                        <div class="mb-3">
+                                            <label class="form-label">Nama Vendor</label>
+                                            <input type="text" id="vendorNama" class="form-control" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">Bidang Keahlian</label>
+                                            <input type="text" id="vendorBidang" class="form-control" placeholder="Contoh: Catering, Dekorasi, Fotografer, dll" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label">No. WhatsApp Vendor</label>
+                                            <input type="text" id="vendorWa" class="form-control" placeholder="Contoh: 0857xxxxxx" required>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-success flex-grow-1" id="btnSubmitVendor">Simpan Vendor</button>
+                                            <button type="button" class="btn btn-secondary" onclick="resetFormVendor()">Batal</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-lg-8">
+                            <div class="card">
+                                <div class="card-header bg-dark text-white">Daftar Mitra Rekanan Vendor</div>
+                                <div class="card-body p-0 table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Nama Vendor</th>
+                                                <th>Bidang</th>
+                                                <th>WhatsApp</th>
+                                                <th class="text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="vendorTableBody">
+                                            <tr>
+                                                <td colspan="4" class="text-center p-4 text-muted">Sedang mengambil daftar rekanan...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+                <div class="tab-pane fade show active" id="attire-pane" role="tabpanel">
+                    <div class="row">
+                        <div class="col-12 mb-4">
+                            <div class="card">
+                                <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
+                                    <span><i class="fa-solid fa-calendar-days me-2"></i>Pilih Jadwal Klien untuk Kelengkapan Attire</span>
+                                    <div class="input-group input-group-sm" style="max-width: 250px;">
+                                        <span class="input-group-text bg-light border-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+                                        <input type="text" id="searchAttireClientInput" class="form-control border-0" placeholder="Cari nama klien..." onkeyup="filterAttireClientList()">
+                                    </div>
+                                </div>
+                                <div class="card-body p-3" id="attireClientGroupContainer" style="max-height: 650px; overflow-y: auto;">
+                                    <div class="text-center p-3 text-muted">Memuat jadwal klien...</div>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
+            </div>
+        </div>
+
+        <div class="modal fade" id="detailKlienModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered">
+                <div class="modal-content">
+                    <div class="modal-header bg-dark text-white">
+                        <h5 class="modal-title"><i class="fa-solid fa-address-card me-2"></i>Rincian Lengkap Data Klien</h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-shadow="none" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body" id="modalDetailBody"></div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Tutup</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="modal fade" id="attireFormModal" tabindex="-1" aria-hidden="true">
+            <div class="modal-dialog modal-lg modal-dialog-centered modal-dialog-scrollable">
+                <div class="modal-content">
+                    <div class="modal-header text-white" style="background-color: var(--primary-color);">
+                        <h5 class="modal-title"><i class="fa-solid fa-clipboard-check me-2"></i><span id="attireFormHeader">Kelengkapan Attire Lapangan</span></h5>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                    </div>
+                    <div class="modal-body">
+                        <form id="attireForm">
+                            <input type="hidden" id="attireClientSelect">
+
+                            <div class="row bg-light p-3 rounded mb-4 border g-3">
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch fs-6">
+                                        <input class="form-check-input" type="checkbox" id="attireFitting">
+                                        <label class="form-check-label fw-semibold" for="attireFitting">Fitting Busana</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch fs-6">
+                                        <input class="form-check-input" type="checkbox" id="attirePacking">
+                                        <label class="form-check-label fw-semibold" for="attirePacking">Packing Siap</label>
+                                    </div>
+                                </div>
+                                <div class="col-md-4">
+                                    <div class="form-check form-switch fs-6">
+                                        <input class="form-check-input" type="checkbox" id="attirePascaAcara">
+                                        <label class="form-check-label fw-semibold" for="attirePascaAcara">Pengembalian Selesai</label>
+                                    </div>
+                                </div>
+                            </div>
+
+                            <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-user-tie me-2"></i>Rincian Busana Utama</h5>
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small">Pengantin Wanita</label>
+                                    <textarea id="attireWanita" class="form-control form-control-sm" rows="3" placeholder="Spesifikasi gaun, aksesoris..."></textarea>
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label fw-bold small">Pengantin Pria</label>
+                                    <textarea id="attirePria" class="form-control form-control-sm" rows="3" placeholder="Beskap, jas, ukuran..."></textarea>
+                                </div>
+                            </div>
+
+                            <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-users-line me-2"></i>Rincian Busana Keluarga</h5>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small fw-bold text-muted">Ibu CPW</label>
+                                    <textarea id="attireIbuWanita" class="form-control form-control-sm" rows="2" placeholder="Ukuran/Warna"></textarea>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small fw-bold text-muted">Bapak CPW</label>
+                                    <textarea id="attireBapakWanita" class="form-control form-control-sm" rows="2" placeholder="Ukuran/Warna"></textarea>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small fw-bold text-muted">Ibu CPP</label>
+                                    <textarea id="attireIbuPria" class="form-control form-control-sm" rows="2" placeholder="Ukuran/Warna"></textarea>
+                                </div>
+                                <div class="col-md-3 col-6">
+                                    <label class="form-label small fw-bold text-muted">Bapak CPP</label>
+                                    <textarea id="attireBapakPria" class="form-control form-control-sm" rows="2" placeholder="Ukuran/Warna"></textarea>
+                                </div>
+                            </div>
+
+                            <h5 class="text-secondary border-bottom pb-2 mb-3"><i class="fa-solid fa-arrow-up-9-1 me-2"></i>Kuantitas & Tambahan</h5>
+                            <div class="row g-3 mb-3">
+                                <div class="col-md-4 col-4">
+                                    <label class="form-label small fw-bold">Pager Ayu</label>
+                                    <input type="number" id="attirePagerAyu" class="form-control form-control-sm" value="0">
+                                </div>
+                                <div class="col-md-4 col-4">
+                                    <label class="form-label small fw-bold">Pager Bagus</label>
+                                    <input type="number" id="attirePagerBagus" class="form-control form-control-sm" value="0">
+                                </div>
+                                <div class="col-md-4 col-4">
+                                    <label class="form-label small fw-bold">Makeup Tambahan</label>
+                                    <input type="number" id="attireMut" class="form-control form-control-sm" value="0">
+                                </div>
+                            </div>
+
+                            <div class="row g-3 mb-4">
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Payung</label>
+                                    <input type="text" id="attirePayung" class="form-control form-control-sm" placeholder="Jumlah/Jenis">
+                                </div>
+                                <div class="col-md-3">
+                                    <label class="form-label small fw-bold">Banner</label>
+                                    <input type="text" id="attireBanner" class="form-control form-control-sm" placeholder="Jumlah/Jenis">
+                                </div>
+                                <div class="col-md-6">
+                                    <label class="form-label small fw-bold">Catatan Operasional Lain-lain</label>
+                                    <textarea id="attireCatatanTambahan" class="form-control form-control-sm" rows="1" placeholder="Logistik lapangan..."></textarea>
+                                </div>
+                            </div>
+                        </form>
+                    </div>
+                    <div class="modal-footer bg-light">
+                        <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Batal</button>
+                        <button type="button" class="btn btn-primary" onclick="triggerAttireFormSubmit()"><i class="fa-solid fa-floppy-disk me-2"></i>Simpan Pembaruan</button>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
+    
+    <script>
+        // =========================================================================
+        // URL GOOGLE APPS SCRIPT (GAS)
+        // =========================================================================
+        const urlGAS = "https://script.google.com/macros/s/AKfycbw8j5HgH-8ost-N79rjknnK7G6KbI43uh2BGZhocADM-wtbIKedlSumBWaruPv9SeiP/exec";
+
+        // State Global Aplikasi
+        let appState = {
+            klien: [],
+            vendor: [],
+            attire: []
+        };
+
+        // Inisialisasi Saat Halaman Terbuka
+        document.addEventListener("DOMContentLoaded", function() {
+            fetchSemuaData();
+
+            document.getElementById('klienForm').addEventListener('submit', handleKlienSubmit);
+            document.getElementById('vendorForm').addEventListener('submit', handleVendorSubmit);
+            document.getElementById('attireForm').addEventListener('submit', handleAttireSubmit);
+        });
+
+        // FUNGSI CEK PASSWORD MENU 1 (DATA KLIEN)
+        function checkKlienTabAccess(event) {
+            const password = prompt("Masukkan password untuk mengakses Data Klien:");
+            if (password !== "333") {
+                alert("Password salah atau akses dibatalkan!");
+                event.preventDefault();
+                event.stopPropagation();
+                
+                const activeTab = document.querySelector('.nav-link.active');
+                if (activeTab) {
+                    bootstrap.Tab.getOrCreateInstance(activeTab).show();
+                }
+                return false;
+            }
+        }
+
+        function showLoading(status) {
+            const overlay = document.getElementById('loadingOverlay');
+            if (status) overlay.classList.remove('d-none');
+            else overlay.classList.add('d-none');
+        }
+
+        // AMBIL DATA DARI GOOGLE SHEETS
+        function fetchSemuaData() {
+            showLoading(true);
+            fetch(`${urlGAS}?action=readAll`)
+                .then(res => res.json())
+                .then(data => {
+                    appState.klien = data.klien || [];
+                    appState.vendor = data.vendor || [];
+                    appState.attire = data.attire || [];
+
+                    renderKlienTable();
+                    renderVendorTable();
+                    renderVendorCheckboxes();
+                    renderAttireClientDropdown();
+                })
+                .catch(err => alert("Gagal menyinkronkan data database: " + err))
+                .finally(() => showLoading(false));
+        }
+
+        // --- MANAJEMEN MENU 1: DATA KLIEN ---
+        // PERBAIKAN TOTAL: URUTKAN BERDASARKAN TANGGAL DAN BUAT INDIKATOR 5 JADWAL TERDEKAT
+        function renderKlienTable() {
+            const tbody = document.getElementById('klienTableBody');
+            const pengingatContainer = document.getElementById('klienPengingatContainer');
+
+            if (appState.klien.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-3 text-muted">Belum ada data klien tersimpan</td></tr>`;
+                pengingatContainer.innerHTML = `<span class="text-muted small px-2">Tidak ada jadwal mendatang.</span>`;
+                return;
+            }
+
+            // 1. Urutkan data secara klonologis (Sama seperti Menu 3)
+            const klienTersortir = [...appState.klien].sort((a, b) => {
+                const dateA = a.Tanggal_Acara ? new Date(a.Tanggal_Acara).getTime() : 0;
+                const dateB = b.Tanggal_Acara ? new Date(b.Tanggal_Acara).getTime() : 0;
+                return dateA - dateB;
+            });
+
+            // 2. Tampilkan di Tabel Menu 1
+            tbody.innerHTML = klienTersortir.map(k => {
+                const harga = Number(k.Harga || 0);
+                const transport = Number(k.Transport || 0);
+                const dp = Number(k.DP || 0);
+                const sisa = harga + transport - dp;
+
+                return `
+                    <tr>
+                        <td><strong>${k.Nama}</strong></td>
+                        <td>${k.Tanggal_Acara ? new Date(k.Tanggal_Acara).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-'}</td>
+                        <td><span class="badge bg-secondary">${k.Paket}</span></td>
+                        <td class="fw-bold ${sisa > 0 ? 'text-danger':'text-success'}">Rp ${sisa.toLocaleString('id-ID')}</td>
+                        <td class="text-center">
+                            <div class="btn-group btn-group-sm">
+                                <button class="btn btn-info text-white" onclick="showKlienDetail('${k.ID}')" title="Detail Klien"><i class="fa-solid fa-eye"></i></button>
+                                <button class="btn btn-warning text-white" onclick="editKlien('${k.ID}')" title="Ubah"><i class="fa-solid fa-pen"></i></button>
+                                <button class="btn btn-danger" onclick="hapusKlien('${k.ID}')" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                            </div>
+                        </td>
+                    </tr>
+                `;
+            }).join('');
+
+            // 3. Logika Menghitung 5 Jadwal Terdekat Mendatang (Hari ini ke depan)
+            const hariIni = new Date();
+            hariIni.setHours(0, 0, 0, 0);
+
+            const jadwalMendatang = klienTersortir.filter(k => {
+                if (!k.Tanggal_Acara) return false;
+                const tglAcara = new Date(k.Tanggal_Acara);
+                tglAcara.setHours(0, 0, 0, 0);
+                return tglAcara >= hariIni; // Hanya ambil yang hari ini atau di masa depan
+            }).slice(0, 5); // Ambil 5 teratas saja
+
+            if (jadwalMendatang.length === 0) {
+                pengingatContainer.innerHTML = `<span class="text-muted small px-2"><i class="fa-solid fa-calendar-xmark me-1"></i> Tidak ada jadwal terdekat di waktu mendatang.</span>`;
+            } else {
+                pengingatContainer.innerHTML = `
+                    <div class="row g-2 p-1">
+                        ${jadwalMendatang.map((k, index) => {
+                            const tgl = new Date(k.Tanggal_Acara).toLocaleDateString('id-ID', {day:'numeric', month:'short'});
+                            return `
+                                <div class="col-md-6 col-xl-4">
+                                    <div class="bg-white p-2 rounded border d-flex justify-content-between align-items-center shadow-sm">
+                                        <div class="text-truncate me-2">
+                                            <span class="badge bg-primary me-1">${index + 1}</span>
+                                            <strong class="text-dark small">${k.Nama}</strong>
+                                            <div class="text-muted" style="font-size: 11px;">${k.Paket}</div>
+                                        </div>
+                                        <span class="badge bg-danger text-wrap text-center py-1 px-2" style="font-size: 11px; min-width: 65px;">
+                                            <i class="fa-regular fa-calendar-days d-block mb-1" style="font-size: 10px;"></i>${tgl}
+                                        </span>
+                                    </div>
+                                </div>
+                            `;
+                        }).join('')}
+                    </div>
+                `;
+            }
+            
+            searchKlienTable();
+        }
+
+        function searchKlienTable() {
+            const query = document.getElementById('searchKlienInput').value.toLowerCase();
+            const rows = document.querySelectorAll('#klienTableBody tr');
+            if(rows.length === 1 && rows[0].cells.length === 1) return;
+
+            rows.forEach(row => {
+                const namaKlien = row.cells[0]?.innerText.toLowerCase() || "";
+                const paketKlien = row.cells[2]?.innerText.toLowerCase() || "";
+                if (namaKlien.includes(query) || paketKlien.includes(query)) {
+                    row.style.display = "";
+                } else {
+                    row.style.display = "none";
+                }
+            });
+        }
+
+        function renderVendorCheckboxes() {
+            const container = document.getElementById('vendorCheckboxesContainer');
+            if (appState.vendor.length === 0) {
+                container.innerHTML = `<span class="text-muted d-block small">Belum ada vendor terinput</span>`;
+                return;
+            }
+
+            container.innerHTML = appState.vendor.map(v => `
+                <div class="form-check">
+                    <input class="form-check-input client-vendor-cb" type="checkbox" value="${v.Nama_Vendor}" id="cbVendor_${v.ID}">
+                    <label class="form-check-label small" for="cbVendor_${v.ID}">
+                        ${v.Nama_Vendor} (${v.Bidang})
+                    </label>
+                </div>
+            `).join('');
+        }
+
+        function handleKlienSubmit(e) {
+            e.preventDefault();
+            const checkedVendors = [];
+            document.querySelectorAll('.client-vendor-cb:checked').forEach(cb => checkedVendors.push(cb.value));
+
+            const id = document.getElementById('klienId').value;
+            const payload = {
+                nama: document.getElementById('klienNama').value,
+                alamat: document.getElementById('klienAlamat').value,
+                no_whatsapp: document.getElementById('klienWa').value,
+                tanggal_acara: document.getElementById('klienTanggal').value,
+                paket: document.getElementById('klienPaket').value,
+                harga: document.getElementById('klienHarga').value,
+                transport: document.getElementById('klienTransport').value,
+                dp: document.getElementById('klienDp').value,
+                vendor: checkedVendors.join(', '),
+                catatan: document.getElementById('klienCatatan').value
+            };
+
+            const action = id ? 'updateKlien' : 'addKlien';
+            if (id) payload.id = id;
+
+            showLoading(true);
+            fetch(urlGAS, {
+                method: 'POST',
+                body: JSON.stringify({ action: action, payload: payload })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert(res.message);
+                resetFormKlien();
+                fetchSemuaData();
+            })
+            .catch(err => alert("Gagal menyimpan data klien: " + err))
+            .finally(() => showLoading(false));
+        }
+
+        function editKlien(id) {
+            const k = appState.klien.find(item => item.ID === id);
+            if (!k) return;
+
+            document.getElementById('klienId').value = k.ID;
+            document.getElementById('klienNama').value = k.Nama;
+            document.getElementById('klienAlamat').value = k.Alamat;
+            document.getElementById('klienWa').value = k.No_Whatsapp;
+            
+            if (k.Tanggal_Acara) {
+                const d = new Date(k.Tanggal_Acara);
+                if (!isNaN(d.getTime())) {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    document.getElementById('klienTanggal').value = `${year}-${month}-${day}`;
+                }
+            } else {
+                document.getElementById('klienTanggal').value = "";
+            }
+
+            document.getElementById('klienPaket').value = k.Paket;
+            document.getElementById('klienHarga').value = k.Harga;
+            document.getElementById('klienTransport').value = k.Transport;
+            document.getElementById('klienDp').value = k.DP;
+            document.getElementById('klienCatatan').value = k.Catatan;
+
+            document.querySelectorAll('.client-vendor-cb').forEach(cb => cb.checked = false);
+            if(k.Vendor) {
+                const kVendors = k.Vendor.split(', ');
+                document.querySelectorAll('.client-vendor-cb').forEach(cb => {
+                    if (kVendors.includes(cb.value)) cb.checked = true;
+                });
+            }
+
+            document.getElementById('formKlienHeader').innerText = "Ubah Data Klien: " + k.Nama;
+            document.getElementById('btnSubmitKlien').innerText = "Perbarui Klien";
+
+            const klienTabTrigger = document.getElementById('klien-tab');
+            if (klienTabTrigger) {
+                const bootstrapTab = bootstrap.Tab.getOrCreateInstance(klienTabTrigger);
+                bootstrapTab.show();
+            }
+
+            window.scrollTo({ top: 0, behavior: 'smooth' });
+        }
+
+        function hapusKlien(id) {
+            if (!confirm("Apakah Anda yakin ingin menghapus data klien ini? Data checklist attire terkait juga akan dihapus.")) return;
+
+            showLoading(true);
+            fetch(urlGAS, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'deleteKlien', payload: { id: id } })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert(res.message);
+                fetchSemuaData();
+            })
+            .catch(err => alert("Gagal menghapus: " + err))
+            .finally(() => showLoading(false));
+        }
+
+        function resetFormKlien() {
+            document.getElementById('klienForm').reset();
+            document.getElementById('klienId').value = "";
+            document.getElementById('formKlienHeader').innerText = "Input Data Klien";
+            document.getElementById('btnSubmitKlien').innerText = "Simpan Klien";
+            document.getElementById('searchKlienInput').value = "";
+            searchKlienTable();
+        }
+
+        function cleanWaNumber(phone) {
+            if (!phone) return '';
+            let cleaned = phone.toString().replace(/\D/g, '');
+            if (cleaned.startsWith('0')) {
+                cleaned = '62' + cleaned.slice(1);
+            } 
+            else if (cleaned.startsWith('8')) {
+                cleaned = '62' + cleaned;
+            }
+            return cleaned;
+        }
+
+        function showKlienDetail(id) {
+            const k = appState.klien.find(item => item.ID === id);
+            if (!k) return;
+
+            const harga = Number(k.Harga || 0);
+            const transport = Number(k.Transport || 0);
+            const dp = Number(k.DP || 0);
+            const total = harga + transport;
+            const sisa = total - dp;
+
+            let vendorContactHtml = `<p class="text-muted small">Tidak ada vendor terdaftar untuk klien ini</p>`;
+            if (k.Vendor) {
+                const selectedVendorNames = k.Vendor.split(', ');
+                vendorContactHtml = selectedVendorNames.map(vName => {
+                    const matchVendor = appState.vendor.find(v => v.Nama_Vendor === vName);
+                    if (matchVendor && matchVendor.Whatsapp) {
+                        const targetWA = cleanWaNumber(matchVendor.Whatsapp);
+                        return `
+                            <div class="d-flex justify-content-between align-items-center border-bottom py-1">
+                                <span><strong>${vName}</strong> (${matchVendor.Bidang})</span>
+                                <a href="https://wa.me/${targetWA}" target="_blank" class="btn btn-sm btn-outline-success py-0 px-2"><i class="fa-brands fa-whatsapp me-1"></i>Chat</a>
+                            </div>
+                        `;
+                    }
+                    return `<div class="border-bottom py-1 text-muted"><span><strong>${vName}</strong> (Kontak tidak ditemukan)</span></div>`;
+                }).join('');
+            }
+
+            const cleanKlienWA = cleanWaNumber(k.No_Whatsapp);
+
+            const detailHtml = `
+                <div class="row g-3">
+                    <div class="col-md-6 border-end">
+                        <h5 class="text-primary"><i class="fa-solid fa-circle-info me-2"></i>Informasi Umum</h5>
+                        <table class="table table-sm table-borderless">
+                            <tr><td width="35%"><strong>Nama Klien</strong></td><td>: ${k.Nama}</td></tr>
+                            <tr><td><strong>No. WA Klien</strong></td><td>: ${k.No_Whatsapp}</td></tr>
+                            <tr><td><strong>Tanggal Acara</strong></td><td>: ${k.Tanggal_Acara ? new Date(k.Tanggal_Acara).toLocaleDateString('id-ID', {weekday: 'long', day:'numeric', month:'long', year:'numeric'}) : '-'}</td></tr>
+                            <tr><td><strong>Paket Acara</strong></td><td>: <span class="badge bg-primary fs-6">${k.Paket}</span></td></tr>
+                            <tr><td><strong>Alamat Acara</strong></td><td>: ${k.Alamat}</td></tr>
+                            <tr><td><strong>Catatan MUA</strong></td><td>: <p class="bg-light p-2 rounded small text-dark">${k.Catatan || '-'}</p></td></tr>
+                        </table>
+                        <a href="https://wa.me/${cleanKlienWA}" target="_blank" class="btn btn-success btn-sm w-100 mb-2"><i class="fa-brands fa-whatsapp me-2"></i>Hubungi WhatsApp Klien</a>
+                    </div>
+                    <div class="col-md-6">
+                        <h5 class="text-danger"><i class="fa-solid fa-money-check-dollar me-2"></i>Rincian Keuangan & Invoice</h5>
+                        <div class="bg-light p-3 rounded mb-3 border">
+                            <div class="d-flex justify-content-between mb-1"><span>Harga Paket:</span><span>Rp ${harga.toLocaleString('id-ID')}</span></div>
+                            <div class="d-flex justify-content-between mb-1"><span>Biaya Transport:</span><span>Rp ${transport.toLocaleString('id-ID')}</span></div>
+                            <div class="d-flex justify-content-between fw-bold border-top pt-1 mb-1"><span>Total Tagihan:</span><span>Rp ${total.toLocaleString('id-ID')}</span></div>
+                            <div class="d-flex justify-content-between text-success mb-1"><span>DP Dibayar:</span><span>- Rp ${dp.toLocaleString('id-ID')}</span></div>
+                            <div class="d-flex justify-content-between fw-bold text-danger border-top pt-1 fs-5"><span>Sisa Pembayaran:</span><span>Rp ${sisa.toLocaleString('id-ID')}</span></div>
+                        </div>
+                        <button class="btn btn-primary btn-sm w-100 mb-3" onclick="cetakInvoiceOtomatis('${k.ID}')"><i class="fa-solid fa-print me-2"></i>Cetak & Unduh Invoice Klien</button>
+                        
+                        <h5 class="text-secondary border-top pt-2"><i class="fa-solid fa-truck-ramp-box me-2"></i>Koordinasi Vendor Terlibat</h5>
+                        <div class="card p-2 bg-light border" style="max-height: 150px; overflow-y:auto;">
+                            ${vendorContactHtml}
+                        </div>
+                    </div>
+                </div>
+            `;
+
+            document.getElementById('modalDetailBody').innerHTML = detailHtml;
+            const myModal = new bootstrap.Modal(document.getElementById('detailKlienModal'));
+            myModal.show();
+        }
+
+        function cetakInvoiceOtomatis(id) {
+            const k = appState.klien.find(item => item.ID === id);
+            if (!k) return;
+
+            const harga = Number(k.Harga || 0);
+            const transport = Number(k.Transport || 0);
+            const dp = Number(k.DP || 0);
+            const total = harga + transport;
+            const sisa = total - dp;
+
+            document.getElementById('invNama').innerText = k.Nama;
+            document.getElementById('invAlamat').innerText = k.Alamat;
+            document.getElementById('invTanggal').innerText = k.Tanggal_Acara ? new Date(k.Tanggal_Acara).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : '-';
+            document.getElementById('invPaket').innerText = k.Paket;
+            document.getElementById('invHarga').innerText = 'Rp ' + harga.toLocaleString('id-ID');
+            document.getElementById('invTransport').innerText = 'Rp ' + transport.toLocaleString('id-ID');
+            document.getElementById('invTotal').innerText = 'Rp ' + total.toLocaleString('id-ID');
+            document.getElementById('invDP').innerText = '- Rp ' + dp.toLocaleString('id-ID');
+            document.getElementById('invSisa').innerText = 'Rp ' + sisa.toLocaleString('id-ID');
+
+            window.print();
+        }
+
+        // --- MANAJEMEN MENU 2: MANAJEMEN VENDOR ---
+        function renderVendorTable() {
+            const tbody = document.getElementById('vendorTableBody');
+            if (appState.vendor.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center p-3 text-muted">Belum ada mitra vendor terinput</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = appState.vendor.map(v => `
+                <tr>
+                    <td><strong>${v.Nama_Vendor}</strong></td>
+                    <td><span class="badge bg-success">${v.Bidang}</span></td>
+                    <td>${v.Whatsapp}</td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button class="btn btn-warning text-white" onclick="editVendor('${v.ID}')"><i class="fa-solid fa-pen"></i></button>
+                            <button class="btn btn-danger" onclick="hapusVendor('${v.ID}')"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>
+            `).join('');
+        }
+
+        function handleVendorSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('vendorId').value;
+            const payload = {
+                nama_vendor: document.getElementById('vendorNama').value,
+                bidang: document.getElementById('vendorBidang').value,
+                whatsapp: document.getElementById('vendorWa').value
+            };
+
+            const action = id ? 'updateVendor' : 'addVendor';
+            if (id) payload.id = id;
+
+            showLoading(true);
+            fetch(urlGAS, {
+                method: 'POST',
+                body: JSON.stringify({ action: action, payload: payload })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert(res.message);
+                resetFormVendor();
+                fetchSemuaData();
+            })
+            .catch(err => alert("Gagal menyimpan vendor: " + err))
+            .finally(() => showLoading(false));
+        }
+
+        function editVendor(id) {
+            const v = appState.vendor.find(item => item.ID === id);
+            if (!v) return;
+
+            document.getElementById('vendorId').value = v.ID;
+            document.getElementById('vendorNama').value = v.Nama_Vendor;
+            document.getElementById('vendorBidang').value = v.Bidang;
+            document.getElementById('vendorWa').value = v.Whatsapp;
+
+            document.getElementById('formVendorHeader').innerText = "Ubah Data Vendor: " + v.Nama_Vendor;
+            document.getElementById('btnSubmitVendor').innerText = "Perbarui Vendor";
+        }
+
+        function hapusVendor(id) {
+            if (!confirm("Apakah Anda yakin ingin menghapus data rekanan vendor ini?")) return;
+
+            showLoading(true);
+            fetch(urlGAS, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'deleteVendor', payload: { id: id } })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert(res.message);
+                fetchSemuaData();
+            })
+            .catch(err => alert("Gagal menghapus vendor: " + err))
+            .finally(() => showLoading(false));
+        }
+
+        function resetFormVendor() {
+            document.getElementById('vendorForm').reset();
+            document.getElementById('vendorId').value = "";
+            document.getElementById('formVendorHeader').innerText = "Tambah Data Vendor";
+            document.getElementById('btnSubmitVendor').innerText = "Simpan Vendor";
+        }
+
+        // --- MANAJEMEN MENU 3: CHECKLIST ATTIRE ---
+        function renderAttireClientDropdown() {
+            const container = document.getElementById('attireClientGroupContainer');
+            if (!container) return;
+            
+            if (appState.klien.length === 0) {
+                container.innerHTML = `<div class="text-center p-3 text-muted">Belum ada data klien terdaftar</div>`;
+                return;
+            }
+
+            const klienTersortir = [...appState.klien].sort((a, b) => {
+                const dateA = a.Tanggal_Acara ? new Date(a.Tanggal_Acara).getTime() : 0;
+                const dateB = b.Tanggal_Acara ? new Date(b.Tanggal_Acara).getTime() : 0;
+                return dateA - dateB;
+            });
+
+            const namaBulanIndo = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+            const grupBulan = {};
+
+            klienTersortir.forEach(k => {
+                let namaBulan = "Tanpa Tanggal";
+                let tglFormat = "";
+                
+                if (k.Tanggal_Acara) {
+                    const d = new Date(k.Tanggal_Acara);
+                    if (!isNaN(d.getTime())) {
+                        namaBulan = namaBulanIndo[d.getMonth()] + " " + d.getFullYear();
+                        tglFormat = d.getDate() + " " + namaBulanIndo[d.getMonth()].slice(0, 3);
+                    }
+                }
+
+                if (!grupBulan[namaBulan]) {
+                    grupBulan[namaBulan] = [];
+                }
+                grupBulan[namaBulan].push({ ...k, tglTampil: tglFormat });
+            });
+
+            let htmlContent = "";
+            for (const bulan in grupBulan) {
+                htmlContent += `
+                    <div class="mb-3 attire-month-group">
+                        <h6 class="text-primary fw-bold border-bottom pb-1 mb-2 bg-light p-2 rounded"><i class="fa-regular fa-calendar me-2"></i>${bulan}</h6>
+                        <div class="list-group list-group-flush shadow-sm rounded">
+                `;
+
+                grupBulan[bulan].forEach(k => {
+                    const attire = appState.attire.find(a => a.ID_Klien === k.ID);
+                    let statusIcon = `<i class="fa-solid fa-circle text-secondary me-3" title="Belum di-input"></i>`;
+                    
+                    if (attire) {
+                        const isFitting = (attire.Fitting === "TRUE" || attire.Fitting === true);
+                        const isPacking = (attire.Packing === "TRUE" || attire.Packing === true);
+                        const isSelesai = (attire.Pasca_Acara === "TRUE" || attire.Pasca_Acara === true);
+
+                        if (isSelesai) {
+                            statusIcon = `<i class="fa-solid fa-circle-check text-success me-3 fs-5" title="Pengembalian Selesai"></i>`;
+                        } else if (isPacking) {
+                            statusIcon = `<i class="fa-solid fa-circle-play text-primary me-3 fs-5" title="Packing Siap"></i>`;
+                        } else if (isFitting) {
+                            statusIcon = `<i class="fa-solid fa-circle-dot text-warning me-3 fs-5" title="Fitting Busana"></i>`;
+                        } else {
+                            statusIcon = `<i class="fa-solid fa-circle-exclamation text-danger me-3 fs-5" title="Semua status mati"></i>`;
+                        }
+                    }
+
+                    htmlContent += `
+                        <button type="button" 
+                                class="list-group-item list-group-item-action d-flex justify-content-between align-items-center client-attire-item py-3" 
+                                data-id="${k.ID}" 
+                                data-nama="${k.Nama.toLowerCase()}"
+                                onclick="selectClientForAttire('${k.ID}')"
+                                id="btn_attire_client_${k.ID}">
+                            <div class="d-flex align-items-center">
+                                ${statusIcon}
+                                <div>
+                                    <span class="badge bg-secondary me-2 text-dark bg-opacity-10 small">${k.tglTampil || '-'}</span>
+                                    <strong class="client-name-text">${k.Nama}</strong>
+                                </div>
+                            </div>
+                            <span class="small text-muted">${k.Paket}</span>
+                        </button>
+                    `;
+                });
+
+                htmlContent += `
+                        </div>
+                    </div>
+                `;
+            }
+
+            container.innerHTML = htmlContent;
+        }
+
+        function selectClientForAttire(clientId) {
+            document.getElementById('attireClientSelect').value = clientId;
+            loadSelectedClientAttire();
+            
+            const attireModalEl = document.getElementById('attireFormModal');
+            const bModal = bootstrap.Modal.getOrCreateInstance(attireModalEl);
+            bModal.show();
+        }
+
+        function loadSelectedClientAttire() {
+            const clientId = document.getElementById('attireClientSelect').value;
+            if (!clientId) return;
+
+            const k = appState.klien.find(item => item.ID === clientId);
+            const header = document.getElementById('attireFormHeader');
+            if (header) header.innerText = "Kelengkapan Attire: " + (k ? k.Nama : "");
+
+            const attire = appState.attire.find(a => a.ID_Klien === clientId);
+
+            if (attire) {
+                document.getElementById('attireFitting').checked = (attire.Fitting === "TRUE" || attire.Fitting === true);
+                document.getElementById('attirePacking').checked = (attire.Packing === "TRUE" || attire.Packing === true);
+                document.getElementById('attirePascaAcara').checked = (attire.Pasca_Acara === "TRUE" || attire.Pasca_Acara === true);
+
+                document.getElementById('attireWanita').value = attire.Pengantin_Wanita || '';
+                document.getElementById('attirePria').value = attire.Pengantin_Pria || '';
+                document.getElementById('attireIbuWanita').value = attire.Ibu_Pengantin_Wanita || '';
+                document.getElementById('attireBapakWanita').value = attire.Bapak_Pengantin_Wanita || '';
+                document.getElementById('attireIbuPria').value = attire.Ibu_Pengantin_Pria || '';
+                document.getElementById('attireBapakPria').value = attire.Bapak_Pengantin_Pria || '';
+                
+                document.getElementById('attirePagerAyu').value = attire.Jumlah_Pager_Ayu || 0;
+                document.getElementById('attirePagerBagus').value = attire.Jumlah_Pager_Bagus || 0;
+                document.getElementById('attireMut').value = attire.Jumlah_Makeup_Tambahan || 0;
+                document.getElementById('attirePayung').value = attire.Payung || '';
+                document.getElementById('attireBanner').value = attire.Banner || '';
+                document.getElementById('attireCatatanTambahan').value = attire.Catatan_Tambahan || '';
+            } else {
+                document.getElementById('attireFitting').checked = false;
+                document.getElementById('attirePacking').checked = false;
+                document.getElementById('attirePascaAcara').checked = false;
+                document.getElementById('attireWanita').value = '';
+                document.getElementById('attirePria').value = '';
+                document.getElementById('attireIbuWanita').value = '';
+                document.getElementById('attireBapakWanita').value = '';
+                document.getElementById('attireIbuPria').value = '';
+                document.getElementById('attireBapakPria').value = '';
+                document.getElementById('attirePagerAyu').value = 0;
+                document.getElementById('attirePagerBagus').value = 0;
+                document.getElementById('attireMut').value = 0;
+                document.getElementById('attirePayung').value = '';
+                document.getElementById('attireBanner').value = '';
+                document.getElementById('attireCatatanTambahan').value = '';
+            }
+        }
+
+        function filterAttireClientList() {
+            const query = document.getElementById('searchAttireClientInput').value.toLowerCase();
+            const groups = document.querySelectorAll('.attire-month-group');
+
+            groups.forEach(group => {
+                let visibleCount = 0;
+                const items = group.querySelectorAll('.client-attire-item');
+                
+                items.forEach(item => {
+                    const nama = item.getAttribute('data-nama');
+                    if (nama.includes(query)) {
+                        item.style.setProperty('display', 'flex', 'important');
+                        visibleCount++;
+                    } else {
+                        item.style.setProperty('display', 'none', 'important');
+                    }
+                });
+
+                if (visibleCount === 0) {
+                    group.style.display = "none";
+                } else {
+                    group.style.display = "block";
+                }
+            });
+        }
+
+        function triggerAttireFormSubmit() {
+            handleAttireSubmit();
+        }
+
+        function handleAttireSubmit(e) {
+            if (e) e.preventDefault();
+            const clientId = document.getElementById('attireClientSelect').value;
+            if (!clientId) return alert("Pilih klien terlebih dahulu!");
+
+            const payload = {
+                id_klien: clientId,
+                fitting: document.getElementById('attireFitting').checked,
+                packing: document.getElementById('attirePacking').checked,
+                pasca_acara: document.getElementById('attirePascaAcara').checked,
+                pengantin_wanita: document.getElementById('attireWanita').value,
+                pengantin_pria: document.getElementById('attirePria').value,
+                ibu_pengantin_wanita: document.getElementById('attireIbuWanita').value,
+                bapak_pengantin_wanita: document.getElementById('attireBapakWanita').value,
+                ibu_pengantin_pria: document.getElementById('attireIbuPria').value,
+                bapak_pengantin_pria: document.getElementById('attireBapakPria').value,
+                jumlah_pager_ayu: document.getElementById('attirePagerAyu').value,
+                jumlah_pager_bagus: document.getElementById('attirePagerBagus').value,
+                jumlah_makeup_tambahan: document.getElementById('attireMut').value,
+                payung: document.getElementById('attirePayung').value,
+                banner: document.getElementById('attireBanner').value,
+                catatan_tambahan: document.getElementById('attireCatatanTambahan').value
+            };
+
+            showLoading(true);
+            fetch(urlGAS, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'saveAttire', payload: payload })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert(res.message);
+                const attireModalEl = document.getElementById('attireFormModal');
+                const bModal = bootstrap.Modal.getInstance(attireModalEl);
+                if (bModal) bModal.hide();
+                fetchSemuaData();
+            })
+            .catch(err => alert("Gagal menyimpan checklist attire: " + err))
+            .finally(() => showLoading(false));
+        }
+    </script>
+</body>
+</html>
