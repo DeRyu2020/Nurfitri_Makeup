@@ -494,20 +494,24 @@
 
         // FUNGSI CEK PASSWORD MENU 1 (DATA KLIEN)
         function checkKlienTabAccess(event) {
-            const password = prompt("Masukkan password untuk mengakses Data Klien:");
-            if (password !== "333") {
-                alert("Password salah atau akses dibatalkan!");
-                event.preventDefault();
-                event.stopPropagation();
-                
-                const activeTab = document.querySelector('.nav-link.active');
-                if (activeTab) {
-                    bootstrap.Tab.getOrCreateInstance(activeTab).show();
-                }
-                return false;
-            }
+    const password = prompt("Masukkan password untuk mengakses Data Klien:");
+    
+    if (password !== "333") {
+        alert("Password salah atau akses dibatalkan!");
+        
+        // 1. Hentikan perpindahan ke Menu 1
+        event.preventDefault();
+        event.stopPropagation();
+        
+        // 2. Paksa sistem untuk mengaktifkan kembali Menu 3 (Checklist Attire)
+        const attireTabTrigger = document.getElementById('attire-tab');
+        if (attireTabTrigger) {
+            const bootstrapTab = bootstrap.Tab.getOrCreateInstance(attireTabTrigger);
+            bootstrapTab.show();
         }
-
+        return false;
+    }
+}
         function showLoading(status) {
             const overlay = document.getElementById('loadingOverlay');
             if (status) overlay.classList.remove('d-none');
