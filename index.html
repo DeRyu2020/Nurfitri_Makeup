@@ -909,8 +909,10 @@
                 const selectedVendorNames = k.Vendor.split(', ');
                 vendorContactHtml = selectedVendorNames.map(vName => {
                     const matchVendor = appState.vendor.find(v => v.Nama_Vendor === vName);
-                    if (matchVendor && matchVendor.Whatsapp) {
-                        const targetWA = cleanWaNumber(matchVendor.Whatsapp);
+                    
+                    // PERBAIKAN: Memastikan pemanggilan properti konsisten menggunakan WhatsApp (A dan P kapital)
+                    if (matchVendor && matchVendor.WhatsApp) {
+                        const targetWA = cleanWaNumber(matchVendor.WhatsApp); // <-- Sudah diperbaiki dari .Whatsapp menjadi .WhatsApp
                         return `
                             <div class="d-flex justify-content-between align-items-center border-bottom py-1">
                                 <span><strong>${vName}</strong> (${matchVendor.Bidang})</span>
@@ -994,26 +996,46 @@
         }
 
         // --- MANAJEMEN MENU 2: VENDOR ---
-        function renderVendorTable() {
-            const tbody = document.getElementById('vendorTableBody');
-            if (appState.vendor.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="4" class="text-center p-4 text-muted">Belum ada rekanan vendor terinput</td></tr>`;
-                return;
-            }
-            tbody.innerHTML = appState.vendor.map(v => `
-                <tr>
-                    <td><strong>${htmlEscape(v.Nama_Vendor)}</strong></td>
-                    <td><span class="badge bg-secondary">${htmlEscape(v.Bidang)}</span></td>
-                    <td><a href="https://wa.me/${cleanWaNumber(v.Whatsapp)}" target="_blank" class="text-decoration-none fw-semibold text-success"><i class="fa-brands fa-whatsapp me-1"></i>${htmlEscape(v.Whatsapp)}</a></td>
-                    <td class="text-center">
-                        <div class="btn-group btn-group-sm">
-                            <button class="btn btn-warning text-white" onclick="editVendor('${v.ID}')" title="Ubah"><i class="fa-solid fa-pen"></i></button>
-                            <button class="btn btn-danger" onclick="hapusVendor('${v.ID}')" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                        </div>
-                    </td>
-                </tr>
-            `).join('');
-        }
+       function renderVendorTable() {
+    const tbody = document.getElementById('vendorTableBody');
+    if (!tbody) return;
+    tbody.innerHTML = '';
+
+    if (!appState.vendor || appState.vendor.length === 0) {
+        tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted py-3">Tidak ada data vendor tersedia.</td></tr>`;
+        return;
+    }
+
+    appState.vendor.forEach((v) => {
+        // PERBAIKAN: Menggunakan v.WhatsApp (A dan P Kapital) agar link wa.me tidak undefined
+        const rawWA = v.WhatsApp || '';
+        const cleanWA = cleanWaNumber(rawWA); 
+
+        tbody.innerHTML += `
+            <tr>
+                <td><strong>${htmlEscape(v.Nama_Vendor)}</strong></td>
+                <td><span class="badge bg-secondary">${htmlEscape(v.Bidang)}</span></td>
+                <td>
+                    ${rawWA ? `
+                        <a href="https://wa.me/${cleanWA}" target="_blank" class="text-decoration-none fw-bold text-success">
+                            <i class="fa-brands fa-whatsapp me-1"></i>${htmlEscape(rawWA)}
+                        </a>
+                    ` : '<span class="text-muted">-</span>'}
+                </td>
+                <td class="text-center">
+                    <div class="btn-group">
+                        <button type="button" class="btn btn-sm btn-outline-warning" onclick="editVendor('${v.ID}')" title="Edit Vendor">
+                            <i class="fa-solid fa-pen"></i>
+                        </button>
+                        <button type="button" class="btn btn-sm btn-outline-danger" onclick="deleteVendor('${v.ID}')" title="Hapus Vendor">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    });
+}
 
         function handleVendorSubmit(e) {
             e.preventDefault();
