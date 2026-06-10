@@ -1043,9 +1043,18 @@
         }
 
         function htmlEscape(str) {
-            if (!str) return '';
-            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
-        }
+    // Tambahkan baris pemaksa tipe data string ini di bagian paling atas fungsi
+    if (str === undefined || str === null) return '';
+    str = String(str); 
+
+    // Kode replace bawaan Anda di bawahnya (contoh):
+    return str
+        .replace(/&/g, '&amp;')
+        .replace(/</g, '&lt;')
+        .replace(/>/g, '&gt;')
+        .replace(/"/g, '&quot;')
+        .replace(/'/g, '&#039;');
+}
 
         function hapusVendor(id) {
             if (!confirm("Apakah Anda yakin ingin menghapus data rekanan vendor ini?")) return;
