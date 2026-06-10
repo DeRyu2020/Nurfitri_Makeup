@@ -167,6 +167,9 @@
                 <li class="nav-item">
                     <button class="nav-link active" id="attire-tab" data-bs-toggle="tab" data-bs-target="#attire-pane" type="button"><i class="fa-solid fa-shirt me-2"></i>Checklist Attire</button>
                 </li>
+                <li class="nav-item">
+                    <button class="nav-link" id="tim-tab" data-bs-toggle="tab" data-bs-target="#tim-pane" type="button"><i class="fa-solid fa-users-gear me-2"></i>Tim Makeup</button>
+                </li>
             </ul>
 
             <div class="tab-content" id="muaTabsContent">
@@ -345,6 +348,85 @@
                     </div>
                 </div>
 
+                <div class="tab-pane fade" id="tim-pane" role="tabpanel">
+                    <div class="row">
+                        <div class="col-md-4">
+                            <div class="card">
+                                <div class="card-header bg-primary text-white" id="formTimHeader">
+                                    <i class="fa-solid fa-user-plus me-2"></i>Tambah Anggota Tim
+                                </div>
+                                <div class="card-body">
+                                    <form id="timForm">
+                                        <input type="hidden" id="timId">
+                                        <div class="mb-3">
+                                            <label class="form-label font-semibold">Nama Anggota</label>
+                                            <input type="text" id="timNama" class="form-control form-control-sm" placeholder="Nama Lengkap" required>
+                                        </div>
+                                        <div class="mb-3">
+                                            <label class="form-label font-semibold">No. Whatsapp</label>
+                                            <input type="text" id="timWa" class="form-control form-control-sm" placeholder="Contoh: 081234567xx" required>
+                                        </div>
+                                        <div class="d-flex gap-2">
+                                            <button type="submit" class="btn btn-primary btn-sm flex-grow-1" id="btnSubmitTim">Simpan Anggota</button>
+                                            <button type="button" class="btn btn-secondary btn-sm" id="btnBatalTim" onclick="resetFormTim()">Batal</button>
+                                        </div>
+                                    </form>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="col-md-8">
+                            <div class="card">
+                                <div class="card-header bg-dark text-white">
+                                    <i class="fa-solid fa-list me-2"></i>Daftar Anggota Tim Makeup
+                                </div>
+                                <div class="card-body p-0 table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Nama</th>
+                                                <th>No. Whatsapp</th>
+                                                <th class="text-center">Aksi</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="timTableBody">
+                                            <tr>
+                                                <td colspan="3" class="text-center p-3 text-muted">Sedang memuat data tim...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="row mt-2">
+                        <div class="col-12">
+                            <div class="card">
+                                <div class="card-header bg-secondary text-white">
+                                    <i class="fa-solid fa-clipboard-user me-2"></i>Daftar Penugasan: Klik Klien Untuk Ditugaskan Tim Makeup
+                                </div>
+                                <div class="card-body p-0 table-responsive">
+                                    <table class="table table-hover align-middle mb-0">
+                                        <thead class="table-light">
+                                            <tr>
+                                                <th>Nama Klien</th>
+                                                <th>Tanggal Acara</th>
+                                                <th>Paket</th>
+                                                <th>Tim Makeup Ditugaskan</th>
+                                            </tr>
+                                        </thead>
+                                        <tbody id="tugasKlienTableBody">
+                                            <tr>
+                                                <td colspan="4" class="text-center p-3 text-muted">Sedang sinkronisasi data penugasan klien...</td>
+                                            </tr>
+                                        </tbody>
+                                    </table>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+
             </div>
         </div>
 
@@ -468,6 +550,30 @@
         </div>
     </div>
 
+    <div class="modal fade" id="modalTugasTim" data-bs-backdrop="static" tabindex="-1" aria-hidden="true">
+        <div class="modal-dialog modal-dialog-centered">
+            <div class="modal-content">
+                <div class="modal-header bg-primary text-white">
+                    <h5 class="modal-title"><i class="fa-solid fa-user-check me-2"></i>Tugaskan Tim Makeup</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+                </div>
+                <div class="modal-body">
+                    <input type="hidden" id="tugasKlienId">
+                    <p>Pilih Anggota Tim Makeup untuk ditugaskan pada klien: <strong id="tugasNamaKlien">-</strong></p>
+                    <div class="mb-3">
+                        <label class="form-label fw-bold small text-secondary">Pilih Tim (Bisa Centang Lebih Dari Satu):</label>
+                        <div id="checkboxesPilihTim" class="p-3 border rounded bg-light" style="max-height: 200px; overflow-y: auto;">
+                            </div>
+                    </div>
+                </div>
+                <div class="modal-footer bg-light">
+                    <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                    <button type="button" class="btn btn-primary btn-sm" onclick="simpanPenugasanTim()">Simpan Penugasan</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
     <script>
@@ -476,11 +582,12 @@
         // =========================================================================
         const urlGAS = "https://script.google.com/macros/s/AKfycbw8j5HgH-8ost-N79rjknnK7G6KbI43uh2BGZhocADM-wtbIKedlSumBWaruPv9SeiP/exec";
 
-        // State Global Aplikasi
+        // State Global Aplikasi (Diperbarui dengan array tim)
         let appState = {
             klien: [],
             vendor: [],
-            attire: []
+            attire: [],
+            tim: []
         };
 
         // Inisialisasi Saat Halaman Terbuka
@@ -490,28 +597,29 @@
             document.getElementById('klienForm').addEventListener('submit', handleKlienSubmit);
             document.getElementById('vendorForm').addEventListener('submit', handleVendorSubmit);
             document.getElementById('attireForm').addEventListener('submit', handleAttireSubmit);
+            document.getElementById('timForm').addEventListener('submit', handleTimSubmit);
         });
 
         // FUNGSI CEK PASSWORD MENU 1 (DATA KLIEN)
         function checkKlienTabAccess(event) {
-    const password = prompt("Masukkan password untuk mengakses Data Klien:");
-    
-    if (password !== "333") {
-        alert("Password salah atau akses dibatalkan!");
-        
-        // 1. Hentikan perpindahan ke Menu 1
-        event.preventDefault();
-        event.stopPropagation();
-        
-        // 2. Paksa sistem untuk mengaktifkan kembali Menu 3 (Checklist Attire)
-        const attireTabTrigger = document.getElementById('attire-tab');
-        if (attireTabTrigger) {
-            const bootstrapTab = bootstrap.Tab.getOrCreateInstance(attireTabTrigger);
-            bootstrapTab.show();
+            const password = prompt("Masukkan password untuk mengakses Data Klien:");
+            
+            if (password !== "333") {
+                alert("Password salah atau akses dibatalkan!");
+                
+                // 1. Hentikan perpindahan ke Menu 1
+                event.preventDefault();
+                event.stopPropagation();
+                
+                // 2. Paksa sistem untuk mengaktifkan kembali Menu 3 (Checklist Attire) atau Menu 4
+                const attireTabTrigger = document.getElementById('attire-tab');
+                if (attireTabTrigger) {
+                    const bootstrapTab = bootstrap.Tab.getOrCreateInstance(attireTabTrigger);
+                    bootstrapTab.show();
+                }
+                return false;
+            }
         }
-        return false;
-    }
-}
 
         function showLoading(status) {
             const overlay = document.getElementById('loadingOverlay');
@@ -528,18 +636,22 @@
                     appState.klien = data.klien || [];
                     appState.vendor = data.vendor || [];
                     appState.attire = data.attire || [];
+                    appState.tim = data.tim || []; // Menyimpan data tim masuk
 
                     renderKlienTable();
                     renderVendorTable();
                     renderVendorCheckboxes();
                     renderAttireClientDropdown();
+                    
+                    // Render tabel baru untuk Menu 4
+                    renderTimTable();
+                    renderTugasKlienTable();
                 })
                 .catch(err => alert("Gagal menyinkronkan data database: " + err))
                 .finally(() => showLoading(false));
         }
 
         // --- MANAJEMEN MENU 1: DATA KLIEN ---
-        // PERBAIKAN TOTAL: URUTKAN BERDASARKAN TANGGAL DAN BUAT INDIKATOR 5 JADWAL TERDEKAT
         function renderKlienTable() {
             const tbody = document.getElementById('klienTableBody');
             const pengingatContainer = document.getElementById('klienPengingatContainer');
@@ -550,14 +662,12 @@
                 return;
             }
 
-            // 1. Urutkan data secara klonologis (Sama seperti Menu 3)
             const klienTersortir = [...appState.klien].sort((a, b) => {
                 const dateA = a.Tanggal_Acara ? new Date(a.Tanggal_Acara).getTime() : 0;
                 const dateB = b.Tanggal_Acara ? new Date(b.Tanggal_Acara).getTime() : 0;
                 return dateA - dateB;
             });
 
-            // 2. Tampilkan di Tabel Menu 1
             tbody.innerHTML = klienTersortir.map(k => {
                 const harga = Number(k.Harga || 0);
                 const transport = Number(k.Transport || 0);
@@ -581,7 +691,6 @@
                 `;
             }).join('');
 
-            // 3. Logika Menghitung 5 Jadwal Terdekat Mendatang (Hari ini ke depan)
             const hariIni = new Date();
             hariIni.setHours(0, 0, 0, 0);
 
@@ -589,8 +698,8 @@
                 if (!k.Tanggal_Acara) return false;
                 const tglAcara = new Date(k.Tanggal_Acara);
                 tglAcara.setHours(0, 0, 0, 0);
-                return tglAcara >= hariIni; // Hanya ambil yang hari ini atau di masa depan
-            }).slice(0, 5); // Ambil 5 teratas saja
+                return tglAcara >= hariIni;
+            }).slice(0, 5);
 
             if (jadwalMendatang.length === 0) {
                 pengingatContainer.innerHTML = `<span class="text-muted small px-2"><i class="fa-solid fa-calendar-xmark me-1"></i> Tidak ada jadwal terdekat di waktu mendatang.</span>`;
@@ -700,13 +809,14 @@
             document.getElementById('klienAlamat').value = k.Alamat;
             document.getElementById('klienWa').value = k.No_Whatsapp;
             
-            // Perbaikan Parsing Tanggal agar Kompatibel dengan <input type="date">
             if (k.Tanggal_Acara) {
-                let dateStr = k.Tanggal_Acara;
-                if (dateStr.includes("T")) {
-                    dateStr = dateStr.split("T")[0];
+                const d = new Date(k.Tanggal_Acara);
+                if (!isNaN(d.getTime())) {
+                    const year = d.getFullYear();
+                    const month = String(d.getMonth() + 1).padStart(2, '0');
+                    const day = String(d.getDate()).padStart(2, '0');
+                    document.getElementById('klienTanggal').value = `${year}-${month}-${day}`;
                 }
-                document.getElementById('klienTanggal').value = dateStr;
             } else {
                 document.getElementById('klienTanggal').value = "";
             }
@@ -764,16 +874,19 @@
         }
 
         function cleanWaNumber(phone) {
-            if (!phone) return '';
-            let cleaned = phone.toString().replace(/\D/g, '');
-            if (cleaned.startsWith('0')) {
-                cleaned = '62' + cleaned.slice(1);
-            } 
-            else if (cleaned.startsWith('8')) {
-                cleaned = '62' + cleaned;
-            }
-            return cleaned;
-        }
+    // Pastikan input dikonversi ke string terlebih dahulu, atau kembalikan string kosong
+    const strPhone = String(phone || '');
+    
+    // Gunakan regex untuk mengambil hanya angka
+    let cleaned = strPhone.replace(/\D/g, ''); 
+    
+    if (cleaned.startsWith('0')) {
+        cleaned = '62' + cleaned.slice(1);
+    } else if (cleaned.startsWith('8')) {
+        cleaned = '62' + cleaned;
+    }
+    return cleaned;
+}
 
         function showKlienDetail(id) {
             const k = appState.klien.find(item => item.ID === id);
@@ -927,6 +1040,11 @@
 
             document.getElementById('formVendorHeader').innerText = "Ubah Data Vendor: " + v.Nama_Vendor;
             document.getElementById('btnSubmitVendor').innerText = "Perbarui Vendor";
+        }
+
+        function htmlEscape(str) {
+            if (!str) return '';
+            return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;").replace(/'/g, "&#039;");
         }
 
         function hapusVendor(id) {
@@ -1170,6 +1288,182 @@
                 fetchSemuaData();
             })
             .catch(err => alert("Gagal menyimpan checklist attire: " + err))
+            .finally(() => showLoading(false));
+        }
+
+        // =========================================================================
+        // --- LOGIKA BARU JAVASCRIPT MENU 4: TIM MAKEUP & PENUGASAN ---
+        // =========================================================================
+        
+        function renderTimTable() {
+            const tbody = document.getElementById('timTableBody');
+            if (!tbody) return;
+            if (appState.tim.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="3" class="text-center text-muted p-3">Belum ada data anggota tim terdaftar.</td></tr>`;
+                return;
+            }
+            
+            tbody.innerHTML = appState.tim.map(t => {
+                const targetWA = cleanWaNumber(t.No_Whatsapp);
+                return `
+                <tr>
+                    <td class="fw-semibold">${htmlEscape(t.Nama)}</td>
+                    <td>
+                        <a href="https://wa.me/${targetWA}" target="_blank" class="text-success text-decoration-none">
+                            <i class="fa-brands fa-whatsapp me-1 text-success"></i>${htmlEscape(t.No_Whatsapp)}
+                        </a>
+                    </td>
+                    <td class="text-center">
+                        <div class="btn-group btn-group-sm">
+                            <button type="button" class="btn btn-warning text-white" onclick="editTim('${t.ID}')" title="Edit"><i class="fa-solid fa-pen"></i></button>
+                            <button type="button" class="btn btn-danger" onclick="deleteTim('${t.ID}', '${htmlEscape(t.Nama)}')" title="Hapus"><i class="fa-solid fa-trash"></i></button>
+                        </div>
+                    </td>
+                </tr>`;
+            }).join('');
+        }
+
+        function handleTimSubmit(e) {
+            e.preventDefault();
+            const id = document.getElementById('timId').value;
+            const payload = {
+                nama: document.getElementById('timNama').value,
+                no_whatsapp: document.getElementById('timWa').value
+            };
+
+            const action = id ? 'updateTim' : 'addTim';
+            if (id) payload.id = id;
+
+            showLoading(true);
+            fetch(urlGAS, {
+                method: 'POST',
+                body: JSON.stringify({ action: action, payload: payload })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert(res.message);
+                resetFormTim();
+                fetchSemuaData();
+            })
+            .catch(err => alert("Gagal menyimpan data tim: " + err))
+            .finally(() => showLoading(false));
+        }
+
+        function editTim(id) {
+            const t = appState.tim.find(item => item.ID === id);
+            if (!t) return;
+
+            document.getElementById('timId').value = t.ID;
+            document.getElementById('timNama').value = t.Nama;
+            document.getElementById('timWa').value = t.No_Whatsapp;
+
+            document.getElementById('formTimHeader').innerHTML = `<i class="fa-solid fa-pen-to-square me-2"></i>Ubah Data Tim: ${t.Nama}`;
+            document.getElementById('btnSubmitTim').innerText = "Perbarui Anggota";
+        }
+
+        function deleteTim(id, nama) {
+            if (!confirm(`Apakah Anda yakin ingin menghapus ${nama} dari daftar tim makeup?`)) return;
+
+            showLoading(true);
+            fetch(urlGAS, {
+                method: 'POST',
+                body: JSON.stringify({ action: 'deleteTim', payload: { id: id } })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert(res.message);
+                fetchSemuaData();
+            })
+            .catch(err => alert("Gagal menghapus anggota tim: " + err))
+            .finally(() => showLoading(false));
+        }
+
+        function resetFormTim() {
+            document.getElementById('timForm').reset();
+            document.getElementById('timId').value = "";
+            document.getElementById('formTimHeader').innerHTML = `<i class="fa-solid fa-user-plus me-2"></i>Tambah Anggota Tim`;
+            document.getElementById('btnSubmitTim').innerText = "Simpan Anggota";
+        }
+
+        // --- INTERAKSI PENUGASAN POP-UP LIST KLIEN ---
+        function renderTugasKlienTable() {
+            const tbody = document.getElementById('tugasKlienTableBody');
+            if (!tbody) return;
+            if (appState.klien.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="4" class="text-center text-muted p-3">Belum ada data klien terdaftar.</td></tr>`;
+                return;
+            }
+
+            const klienTersortir = [...appState.klien].sort((a, b) => {
+                const dateA = a.Tanggal_Acara ? new Date(a.Tanggal_Acara).getTime() : 0;
+                const dateB = b.Tanggal_Acara ? new Date(b.Tanggal_Acara).getTime() : 0;
+                return dateA - dateB;
+            });
+
+            tbody.innerHTML = klienTersortir.map(k => {
+                const timTugas = k.Tim_Ditugaskan ? k.Tim_Ditugaskan : `<span class="text-danger small italic"><i class="fa-solid fa-triangle-exclamation me-1"></i>Belum ditugaskan</span>`;
+                const tgl = k.Tanggal_Acara ? new Date(k.Tanggal_Acara).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-';
+                return `
+                <tr onclick="bukaModalPenugasanTim('${k.ID}', '${htmlEscape(k.Nama)}')" style="cursor: pointer;" title="Klik untuk menugaskan tim">
+                    <td class="fw-semibold text-primary">${htmlEscape(k.Nama)} <i class="fa-solid fa-arrow-pointer ms-1 small text-muted"></i></td>
+                    <td>${tgl}</td>
+                    <td><span class="badge bg-secondary">${htmlEscape(k.Paket)}</span></td>
+                    <td><div class="fw-bold text-dark">${timTugas}</div></td>
+                </tr>`;
+            }).join('');
+        }
+
+        function bukaModalPenugasanTim(idKlien, namaKlien) {
+            document.getElementById('tugasKlienId').value = idKlien;
+            document.getElementById('tugasNamaKlien').innerText = namaKlien;
+
+            // Dapatkan penugasan aktif dari state
+            const klien = appState.klien.find(k => k.ID === idKlien);
+            const timTerpilih = klien && klien.Tim_Ditugaskan ? klien.Tim_Ditugaskan.split(', ') : [];
+
+            const container = document.getElementById('checkboxesPilihTim');
+            if (appState.tim.length === 0) {
+                container.innerHTML = `<span class="text-muted small d-block">Silakan isi data anggota tim pada form di atas terlebih dahulu.</span>`;
+            } else {
+                container.innerHTML = appState.tim.map(t => {
+                    const checked = timTerpilih.includes(t.Nama) ? 'checked' : '';
+                    return `
+                    <div class="form-check py-1">
+                        <input class="form-check-input cb-pilih-tugas" type="checkbox" value="${t.Nama}" id="cbTugasTim_${t.ID}" ${checked}>
+                        <label class="form-check-label small" for="cbTugasTim_${t.ID}">
+                            <strong>${htmlEscape(t.Nama)}</strong> (${htmlEscape(t.No_Whatsapp)})
+                        </label>
+                    </div>`;
+                }).join('');
+            }
+
+            const modalEl = document.getElementById('modalTugasTim');
+            const myModal = bootstrap.Modal.getOrCreateInstance(modalEl);
+            myModal.show();
+        }
+
+        function simpanPenugasanTim() {
+            const idKlien = document.getElementById('tugasKlienId').value;
+            const checkboxes = document.querySelectorAll('.cb-pilih-tugas:checked');
+            const listNamaTim = Array.from(checkboxes).map(cb => cb.value).join(', ');
+
+            showLoading(true);
+            fetch(urlGAS, {
+                method: 'POST',
+                body: JSON.stringify({
+                    action: 'tugaskanTim',
+                    payload: { id_klien: idKlien, tim_ditugaskan: listNamaTim }
+                })
+            })
+            .then(res => res.json())
+            .then(res => {
+                alert(res.message);
+                const modalEl = document.getElementById('modalTugasTim');
+                const myModal = bootstrap.Modal.getInstance(modalEl);
+                if (myModal) myModal.hide();
+                fetchSemuaData();
+            })
+            .catch(err => alert("Gagal menyimpan penugasan tim: " + err))
             .finally(() => showLoading(false));
         }
     </script>
