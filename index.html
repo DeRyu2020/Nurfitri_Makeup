@@ -248,10 +248,15 @@
                             <div class="card">
                                 <div class="card-header bg-dark text-white d-flex justify-content-between align-items-center flex-wrap gap-2">
                                     <span>Daftar Klien Terjadwal (Berdasarkan Tanggal Terdekat)</span>
-                                    <div class="input-group input-group-sm" style="max-width: 250px;">
-                                        <span class="input-group-text bg-light border-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
-                                        <input type="text" id="searchKlienInput" class="form-control border-0" placeholder="Cari nama / paket..." onkeyup="searchKlienTable()">
-                                    </div>
+                                   <div class="d-flex gap-2 align-items-center">
+    <div class="input-group input-group-sm" style="max-width: 230px;">
+        <span class="input-group-text bg-light border-0"><i class="fa-solid fa-magnifying-glass text-muted"></i></span>
+        <input type="text" id="searchKlienInput" class="form-control border-0" placeholder="Cari nama / paket..." onkeyup="searchKlienTable()">
+    </div>
+    <button type="button" class="btn btn-success btn-sm" onclick="bukaModalBagikanKlien()" title="Bagikan Daftar Klien ke WA">
+        <i class="fa-brands fa-whatsapp fs-6"></i>
+    </button>
+</div>
                                 </div>
                                 <div class="card-body p-0 table-responsive">
                                     <table class="table table-hover align-middle mb-0">
@@ -618,6 +623,33 @@
             </div>
         </div>
     </div>
+<div class="modal fade" id="modalBagikanKlien" tabindex="-1" aria-hidden="true">
+    <div class="modal-dialog modal-dialog-centered">
+        <div class="modal-content">
+            <div class="modal-header bg-success text-white">
+                <h5 class="modal-title"><i class="fa-solid fa-share-nodes me-2"></i>Bagikan Daftar Klien</h5>
+                <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal" aria-label="Close"></button>
+            </div>
+            <div class="modal-body">
+                <p class="small text-muted">Tentukan rentang tanggal acara klien yang ingin Anda bagikan lewat WhatsApp.</p>
+                <div class="row g-2">
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Dari Tanggal</label>
+                        <input type="date" id="bagikanTglMulai" class="form-control form-control-sm">
+                    </div>
+                    <div class="col-6">
+                        <label class="form-label small fw-bold">Sampai Tanggal</label>
+                        <input type="date" id="bagikanTglSelesai" class="form-control form-control-sm">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer bg-light">
+                <button type="button" class="btn btn-secondary btn-sm" data-bs-dismiss="modal">Batal</button>
+                <button type="button" class="btn btn-success btn-sm" onclick="prosesBagikanWAKlien()"><i class="fa-brands fa-whatsapp me-1"></i> Bagikan</button>
+            </div>
+        </div>
+    </div>
+</div>
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.3.0/dist/js/bootstrap.bundle.min.js"></script>
     
@@ -787,6 +819,8 @@
                 }
             });
         }
+
+
 
         function renderVendorCheckboxes() {
             const container = document.getElementById('vendorCheckboxesContainer');
@@ -1566,6 +1600,180 @@
                 .replace(/"/g, '&quot;')
                 .replace(/'/g, '&#039;');
         }
+
+function bukaModalBagikanKlien() {
+    try {
+        const hariIni = new Date();
+        const depan = new Date();
+        depan.setDate(hariIni.getDate() + 30);
+        
+        document.getElementById('bagikanTglMulai').value = hariIni.toISOString().substring(0, 10);
+        document.getElementById('bagikanTglSelesai').value = depan.toISOString().substring(0, 10);
+        
+        // Membuka modal secara paksa menggunakan Bootstrap API
+        const modalEl = document.getElementById('modalBagikanKlien');
+        if (!modalEl) {
+            alert("Error: Elemen HTML modalBagikanKlien tidak ditemukan!");
+            return;
+        }
+        const myModal = new bootstrap.Modal(modalEl);
+        myModal.show();
+    } catch (err) {
+        console.error("Gagal membuka modal:", err);
+        alert("Terjadi kesalahan saat membuka modal: " + err.message);
+    }
+}
+
+function prosesBagikanWAKlien() {
+    const tglMulaiStr = document.getElementById('bagikanTglMulai').value; // Format: YYYY-MM-DD
+    const tglSelesaiStr = document.getElementById('bagikanTglSelesai').value; // Format: YYYY-MM-DD
+    
+    if (!tglMulaiStr || !tglSelesaiStr) {
+        alert("Mohon tentukan kedua rentang tanggal!");
+        return;
+    }
+    
+    if (tglSelesaiStr < tglMulaiStr) {
+        alert("Tanggal selesai tidak boleh lebih awal dari tanggal mulai!");
+        return;
+    }
+    
+    if (!appState || !appState.klien) {
+        alert("Data klien belum dimuat atau kosong!");
+        return;
+    }
+
+    // FUNGSI PENGAMAN TIMEZONE: Menjamin penanggalan tidak mundur akibat perbedaan zona waktu internasional
+    function normalisasiKeISO(inputTgl) {
+        if (!inputTgl) return null;
+        let str = String(inputTgl).trim();
+        
+        // JIKA FORMAT ISO (Ada huruf T atau Z), kita paksa konversi ke zona waktu Indonesia (+7 jam)
+        if (str.includes('T') || str.includes('Z')) {
+            const d = new Date(str);
+            if (!isNaN(d.getTime())) {
+                // Tambahkan selisih menit zona waktu lokal komputer agar tidak ditarik mundur ke UTC
+                const tglLokal = new Date(d.getTime() + (d.getTimezoneOffset() * 60000) * -1);
+                const y = tglLokal.getFullYear();
+                const m = String(tglLokal.getMonth() + 1).padStart(2, '0');
+                const h = String(tglLokal.getDate()).padStart(2, '0');
+                return `${y}-${m}-${h}`;
+            }
+        }
+        
+        // 1. Jika format teks biasa sudah YYYY-MM-DD
+        if (/^\d{4}-\d{2}-\d{2}$/.test(str)) {
+            return str;
+        }
+        
+        // 2. Jika formatnya DD/MM/YYYY atau DD-MM-YYYY (Bawaan Google Sheets Lokal)
+        let pemisah = str.includes('/') ? '/' : (str.includes('-') ? '-' : null);
+        if (pemisah) {
+            let bagian = str.split(pemisah);
+            if (bagian.length === 3) {
+                if (bagian[2].length === 4) {
+                    let h = bagian[0].padStart(2, '0');
+                    let m = bagian[1].padStart(2, '0');
+                    let y = bagian[2];
+                    return `${y}-${m}-${h}`;
+                }
+                if (bagian[0].length === 4) {
+                    let y = bagian[0];
+                    let m = bagian[1].padStart(2, '0');
+                    let h = bagian[2].padStart(2, '0');
+                    return `${y}-${m}-${h}`;
+                }
+            }
+        }
+        
+        // 3. Cadangan konversi objek Date standar biasa
+        const d = new Date(inputTgl);
+        if (!isNaN(d.getTime())) {
+            const y = d.getFullYear();
+            const m = String(d.getMonth() + 1).padStart(2, '0');
+            const h = String(d.getDate()).padStart(2, '0');
+            return `${y}-${m}-${h}`;
+        }
+        
+        return null;
+    }
+
+    // Melakukan penyaringan data klien berdasarkan rentang tanggal kalender
+    const klienTerfilter = appState.klien.filter(k => {
+        const tglBaku = normalisasiKeISO(k.Tanggal_Acara);
+        if (!tglBaku) return false;
+        
+        return tglBaku >= tglMulaiStr && tglBaku <= tglSelesaiStr;
+    });
+    
+    if (klienTerfilter.length === 0) {
+        alert("Tidak ada data klien pada rentang tanggal tersebut.");
+        return;
+    }
+    
+    // Mengurutkan data klien berdasarkan urutan tanggal terkecil ke terbesar
+    klienTerfilter.sort((a, b) => {
+        const tglA = normalisasiKeISO(a.Tanggal_Acara) || "";
+        const tglB = normalisasiKeISO(b.Tanggal_Acara) || "";
+        return tglA.localeCompare(tglB);
+    });
+    
+    const kelompokBulan = {};
+    const namaBulanIndo = ["Januari", "Februari", "Maret", "April", "Mei", "Juni", "Juli", "Agustus", "September", "Oktober", "November", "Desember"];
+    
+    klienTerfilter.forEach(k => {
+        const tglBaku = normalisasiKeISO(k.Tanggal_Acara);
+        const parts = tglBaku.split('-'); // Menghasilkan array [YYYY, MM, DD] yang akurat
+        
+        const namaBulan = namaBulanIndo[parseInt(parts[1], 10) - 1];
+        const namaTahun = parts[0];
+        const namaGrup = `${namaBulan} ${namaTahun}`;
+        
+        if (!kelompokBulan[namaGrup]) {
+            kelompokBulan[namaGrup] = [];
+        }
+        
+        kelompokBulan[namaGrup].push({
+            klien: k,
+            hari: parts[2]
+        });
+    });
+    
+    // Menyusun teks keluaran format pesan WhatsApp share
+    let pesanStr = "";
+    
+    for (const [bulanTahun, daftarKlien] of Object.entries(kelompokBulan)) {
+        pesanStr += `*${bulanTahun}*\n`;
+        daftarKlien.forEach(item => {
+            const k = item.klien;
+            const tglHari = item.hari;
+            
+            // Pengaman kolom string kosong agar terhindar dari crash 'undefined'
+            const tempatAcara = (k.Alamat && String(k.Alamat).trim() !== "") ? String(k.Alamat).trim() : '-';
+            
+            let teksCatatan = "";
+            if (k.Catatan && String(k.Catatan).trim() !== "") {
+                teksCatatan = ` + ${String(k.Catatan).trim()}`;
+            }
+            
+            pesanStr += `${tglHari} - ${k.Nama} (${tempatAcara})${teksCatatan}\n`;
+        });
+        pesanStr += `\n`; 
+    }
+    
+    pesanStr = pesanStr.trim();
+    
+    // Membuka jendela tautan WhatsApp Web / API share
+    const urlTextEncoded = encodeURIComponent(pesanStr);
+    const waLink = `https://api.whatsapp.com/send?text=${urlTextEncoded}`;
+    window.open(waLink, '_blank');
+    
+    // Tutup tampilan jendela modal pop-up setelah selesai
+    const modalEl = document.getElementById('modalBagikanKlien');
+    const bModal = bootstrap.Modal.getInstance(modalEl);
+    if (bModal) bModal.hide();
+}
+
     </script>
 </body>
 </html>
