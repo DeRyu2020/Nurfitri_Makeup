@@ -875,147 +875,202 @@
             renderKlienTable();
         }
 
-        function renderKlienTable() {
-            const tbody = document.getElementById('klienTableBody');
-            const pengingatContainer = document.getElementById('klienPengingatContainer');
-            const infoContainer = document.getElementById('klienPaginationInfo');
-            const buttonsContainer = document.getElementById('klienPaginationButtons');
+       function renderKlienTable() {
+    const tbody = document.getElementById('klienTableBody');
+    const pengingatContainer = document.getElementById('klienPengingatContainer');
+    const infoContainer = document.getElementById('klienPaginationInfo');
+    const buttonsContainer = document.getElementById('klienPaginationButtons');
 
-            if (appState.klien.length === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">Belum ada data klien terdaftar</td></tr>`;
-                if(pengingatContainer) pengingatContainer.innerHTML = `<span class="text-muted small px-2">Tidak ada jadwal acara mendatang.</span>`;
-                return;
-            }
+    if (!appState.klien || appState.klien.length === 0) {
+        if(tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">Belum ada data klien terdaftar</td></tr>`;
+        if(pengingatContainer) pengingatContainer.innerHTML = `<span class="text-muted small px-2">Tidak ada jadwal acara mendatang.</span>`;
+        return;
+    }
 
-            // Ambil data nilai filter
-            const keyword = document.getElementById('searchKlienInput') ? document.getElementById('searchKlienInput').value.toLowerCase() : "";
-            const selectBulan = document.getElementById('filterKlienBulan') ? document.getElementById('filterKlienBulan').value : "";
-            const selectTahun = document.getElementById('filterKlienTahun') ? document.getElementById('filterKlienTahun').value : "";
-            const selectLimit = document.getElementById('filterKlienLimit') ? document.getElementById('filterKlienLimit').value : "10";
+    // Ambil data nilai filter
+    const keyword = document.getElementById('searchKlienInput') ? document.getElementById('searchKlienInput').value.toLowerCase() : "";
+    const selectBulan = document.getElementById('filterKlienBulan') ? document.getElementById('filterKlienBulan').value : "";
+    const selectTahun = document.getElementById('filterKlienTahun') ? document.getElementById('filterKlienTahun').value : "";
+    const selectLimit = document.getElementById('filterKlienLimit') ? document.getElementById('filterKlienLimit').value : "10";
 
-            // Urutkan klien berdasarkan tanggal terdekat
-            const klienTersortir = [...appState.klien].sort((a, b) => {
-                const dateA = a.Tanggal_Acara ? new Date(a.Tanggal_Acara).getTime() : 0;
-                const dateB = b.Tanggal_Acara ? new Date(b.Tanggal_Acara).getTime() : 0;
-                return dateA - dateB;
-            });
+    // Urutkan klien berdasarkan tanggal terdekat
+    const klienTersortir = [...appState.klien].sort((a, b) => {
+        const dateA = a.Tanggal_Acara ? new Date(a.Tanggal_Acara).getTime() : Infinity;
+        const dateB = b.Tanggal_Acara ? new Date(b.Tanggal_Acara).getTime() : Infinity;
+        return dateA - dateB;
+    });
 
-            // Jalankan filter gabungan data
-            let dataLolosFilter = [];
-            klienTersortir.forEach(k => {
-                let kBulan = "", kTahun = "";
-                if (k.Tanggal_Acara) {
-                    const d = new Date(k.Tanggal_Acara);
-                    if (!isNaN(d.getTime())) {
-                        kBulan = String(d.getMonth() + 1).padStart(2, '0');
-                        kTahun = String(d.getFullYear());
-                    }
-                }
+    // --- RENDER COMPONENT: PENGINGAT 5 JADWAL MENDATANG ---
+    if (pengingatContainer) {
+        const hariIniMs = new Date().setHours(0,0,0,0);
+        const jadwalMendatang = klienTersortir.filter(k => {
+            if (!k.Tanggal_Acara) return false;
+            return new Date(k.Tanggal_Acara).getTime() >= hariIniMs;
+        }).slice(0, 5);
 
-                const matchKeyword = (k.Nama && k.Nama.toLowerCase().includes(keyword)) || 
-                                     (k.Paket && k.Paket.toLowerCase().includes(keyword));
-                const matchBulan = selectBulan === "" || kBulan === selectBulan;
-                const matchTahun = selectTahun === "" || kTahun === selectTahun;
+        if (jadwalMendatang.length === 0) {
+            pengingatContainer.innerHTML = `<span class="text-muted small px-2">Tidak ada jadwal acara mendatang dalam waktu dekat.</span>`;
+        } else {
+            pengingatContainer.innerHTML = `
+                <div class="row g-2 px-2 mb-3">
+                    ${jadwalMendatang.map((k, index) => {
+                        const tgl = k.Tanggal_Acara ? new Date(k.Tanggal_Acara).toLocaleDateString('id-ID', {day:'numeric', month:'short'}) : '-';
+                        
+                        // --- SINKRONISASI LOGIKA STATUS ATTIRE SESUAI DATABASE ASLI ---
+                        const attireKlien = appState.attire ? appState.attire.find(a => String(a.ID_Klien) === String(k.ID)) : null;
+                        let badgeAttireHtml = `<span class="badge bg-secondary" style="font-size: 10px; padding: 2px 5px;"><i class="fa-solid fa-spinner me-1"></i>Kosong</span>`;
+                        
+                        if (attireKlien) {
+                            const fit = attireKlien.Fitting === "TRUE" || attireKlien.Fitting === true;
+                            const pack = attireKlien.Packing === "TRUE" || attireKlien.Packing === true;
+                            const pasca = attireKlien.Pasca_Acara === "TRUE" || attireKlien.Pasca_Acara === true;
 
-                if (matchKeyword && matchBulan && matchTahun) {
-                    dataLolosFilter.push(k);
-                }
-            });
+                            if (pasca) {
+                                badgeAttireHtml = `<span class="badge bg-success" style="font-size: 10px; padding: 2px 5px;"><i class="fa-solid fa-circle-check me-1"></i>Attire: Selesai</span>`;
+                            } else if (pack) {
+                                badgeAttireHtml = `<span class="badge bg-primary" style="font-size: 10px; padding: 2px 5px;"><i class="fa-solid fa-box-open me-1"></i>Attire: Packing</span>`;
+                            } else if (fit) {
+                                badgeAttireHtml = `<span class="badge bg-warning text-dark" style="font-size: 10px; padding: 2px 5px;"><i class="fa-solid fa-scissors me-1"></i>Attire: Fitting</span>`;
+                            } else {
+                                badgeAttireHtml = `<span class="badge bg-light text-dark border" style="font-size: 10px; padding: 2px 5px;"><i class="fa-solid fa-file-lines me-1"></i>Attire: Belum Fitting</span>`;
+                            }
+                        }
 
-            const totalEntries = dataLolosFilter.length;
-            if (totalEntries === 0) {
-                tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">Data klien tidak ditemukan berdasarkan filter.</td></tr>`;
-                if (infoContainer) infoContainer.innerText = "Showing 0 to 0 of 0 entries";
-                if (buttonsContainer) buttonsContainer.innerHTML = "";
-                return;
-            }
-
-            // Hitung Pagination
-            let itemsPerPage = selectLimit === "all" ? totalEntries : parseInt(selectLimit);
-            let totalPages = Math.ceil(totalEntries / itemsPerPage);
-            if (currentKlienPage > totalPages) currentKlienPage = totalPages;
-            if (currentKlienPage < 1) currentKlienPage = 1;
-
-            let startIndex = (currentKlienPage - 1) * itemsPerPage;
-            let endIndex = Math.min(startIndex + itemsPerPage, totalEntries);
-            const dataHalamanIni = dataLolosFilter.slice(startIndex, endIndex);
-
-            // Render baris tabel klien
-            tbody.innerHTML = dataHalamanIni.map(k => {
-                const total = Number(k.Harga || 0) + Number(k.Transport || 0);
-                const sisa = total - Number(k.DP || 0);
-                const tgl = k.Tanggal_Acara ? new Date(k.Tanggal_Acara).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-';
-
-                return `
-                    <tr>
-                        <td>
-                            <strong class="text-dark">${htmlEscape(k.Nama)}</strong>
-                            <div class="text-muted small"><i class="fa-solid fa-map-location-dot me-1"></i>${htmlEscape(k.Alamat)}</div>
-                        </td>
-                        <td class="small fw-semibold text-secondary">${tgl}</td>
-                        <td><span class="badge bg-light text-dark border">${htmlEscape(k.Paket)}</span></td>
-                        <td class="fw-bold ${sisa > 0 ? 'text-danger' : 'text-success'}">Rp ${sisa.toLocaleString('id-ID')}</td>
-                        <td class="text-center">
-                            <div class="btn-group btn-group-sm">
-                                <button class="btn btn-dark" onclick="showKlienDetail('${k.ID}')" title="Lihat Rincian"><i class="fa-solid fa-eye"></i></button>
-                                <button class="btn btn-warning text-white" onclick="editKlien('${k.ID}')" title="Ubah"><i class="fa-solid fa-pen"></i></button>
-                                <button class="btn btn-danger" onclick="hapusKlien('${k.ID}')" title="Hapus"><i class="fa-solid fa-trash"></i></button>
-                            </div>
-                        </td>
-                    </tr>
-                `;
-            }).join('');
-
-            // Info footer & tombol navigasi halaman
-            if (infoContainer) infoContainer.innerText = `Showing ${startIndex + 1} to ${endIndex} of ${totalEntries} entries`;
-            if (buttonsContainer) {
-                let btnHtml = `<li class="page-item ${currentKlienPage === 1 ? 'disabled' : ''}"><button class="page-link py-1 px-2 text-dark" onclick="changeKlienPage(${currentKlienPage - 1})">&laquo;</button></li>`;
-                for (let i = 1; i <= totalPages; i++) {
-                    btnHtml += `<li class="page-item ${currentKlienPage === i ? 'active' : ''}"><button class="page-link py-1 px-2 ${currentKlienPage === i ? 'bg-dark border-dark text-white' : 'text-dark'}" onclick="changeKlienPage(${i})">${i}</button></li>`;
-                }
-                btnHtml += `<li class="page-item ${currentKlienPage === totalPages ? 'disabled' : ''}"><button class="page-link py-1 px-2 text-dark" onclick="changeKlienPage(${currentKlienPage + 1})">&raquo;</button></li>`;
-                buttonsContainer.innerHTML = btnHtml;
-            }
-
-            // Bagian Banner Pengingat 5 Jadwal Terdekat (Selalu Berdasarkan Seluruh Data Klien Terdekat Hari Ini)
-            const hariIni = new Date();
-            hariIni.setHours(0, 0, 0, 0);
-
-            const jadwalMendatang = klienTersortir.filter(k => {
-                if (!k.Tanggal_Acara) return false;
-                const tglAcara = new Date(k.Tanggal_Acara);
-                tglAcara.setHours(0, 0, 0, 0);
-                return tglAcara >= hariIni;
-            }).slice(0, 5);
-
-            if (jadwalMendatang.length === 0) {
-                if(pengingatContainer) pengingatContainer.innerHTML = `<span class="text-muted small px-2"><i class="fa-solid fa-calendar-xmark me-1"></i> Tidak ada jadwal terdekat di waktu mendatang.</span>`;
-            } else {
-                if(pengingatContainer) {
-                    pengingatContainer.innerHTML = `
-                        <div class="row g-2 p-1">
-                            ${jadwalMendatang.map((k, index) => {
-                                const tgl = new Date(k.Tanggal_Acara).toLocaleDateString('id-ID', {day:'numeric', month:'short'});
-                                return `
-                                    <div class="col-md-6 col-xl-4">
-                                        <div class="bg-white p-2 rounded border d-flex justify-content-between align-items-center shadow-sm">
-                                            <div class="text-truncate me-2">
-                                                <span class="badge bg-primary me-1">${index + 1}</span>
-                                                <strong class="text-dark small">${k.Nama}</strong>
-                                                <div class="text-muted" style="font-size: 11px;">${k.Paket}</div>
-                                            </div>
-                                            <span class="badge bg-danger text-wrap text-center py-1 px-2" style="font-size: 11px; min-width: 65px;">
-                                                <i class="fa-regular fa-calendar-days d-block mb-1" style="font-size: 10px;"></i>${tgl}
-                                            </span>
-                                        </div>
+                        return `
+                            <div class="col-md-6 col-xl-4">
+                                <div class="bg-white p-2 rounded border d-flex justify-content-between align-items-center shadow-sm">
+                                    <div class="text-truncate me-2">
+                                        <span class="badge bg-primary me-1">${index + 1}</span>
+                                        <strong class="text-dark small">${htmlEscape(k.Nama)}</strong>
+                                        <div class="text-muted" style="font-size: 11px;">${htmlEscape(k.Paket)}</div>
+                                        <div class="mt-1">${badgeAttireHtml}</div>
                                     </div>
-                                `;
-                            }).join('')}
-                        </div>
-                    `;
-                }
+                                    <span class="badge bg-danger text-wrap text-center py-1 px-2" style="font-size: 11px; min-width: 65px;">
+                                        <i class="fa-regular fa-calendar-days d-block mb-1" style="font-size: 10px;"></i>${tgl}
+                                    </span>
+                                </div>
+                            </div>
+                        `;
+                    }).join('')}
+                </div>
+            `;
+        }
+    }
+
+    // --- PROSES FILTER DATA UNTUK TABEL UTAMA ---
+    let dataLolosFilter = [];
+    klienTersortir.forEach(k => {
+        const keyword = (document.getElementById('searchKlienInput') ? document.getElementById('searchKlienInput').value : "").toLowerCase();
+        const matchKeyword = k.Nama.toLowerCase().includes(keyword) || 
+                             (k.Paket && k.Paket.toLowerCase().includes(keyword));
+        
+        let matchBulan = true;
+        let matchTahun = true;
+        
+        if (k.Tanggal_Acara) {
+            const parts = k.Tanggal_Acara.split('-'); // yyyy-mm-dd
+            if (selectBulan && parts[1] !== selectBulan) matchBulan = false;
+            if (selectTahun && parts[0] !== selectTahun) matchTahun = false;
+        } else {
+            if (selectBulan || selectTahun) {
+                matchBulan = false;
+                matchTahun = false;
             }
         }
+        
+        if (matchKeyword && matchBulan && matchTahun) {
+            dataLolosFilter.push(k);
+        }
+    });
+
+    // --- LOGIKA PAGINATION ---
+    const totalEntries = dataLolosFilter.length;
+    if (totalEntries === 0) {
+        if(tbody) tbody.innerHTML = `<tr><td colspan="5" class="text-center p-4 text-muted">Tidak ada data klien yang cocok dengan filter</td></tr>`;
+        if(infoContainer) infoContainer.innerText = "Showing 0 to 0 of 0 entries";
+        if(buttonsContainer) buttonsContainer.innerHTML = "";
+        return;
+    }
+
+    let itemsPerPage = selectLimit === "all" ? totalEntries : parseInt(selectLimit);
+    let totalPages = Math.ceil(totalEntries / itemsPerPage);
+    if (currentKlienPage > totalPages) currentKlienPage = totalPages;
+    if (currentKlienPage < 1) currentKlienPage = 1;
+
+    let startIndex = (currentKlienPage - 1) * itemsPerPage;
+    let endIndex = Math.min(startIndex + itemsPerPage, totalEntries);
+    const dataHalamanIni = dataLolosFilter.slice(startIndex, endIndex);
+
+    // --- RENDER COMPONENT: TABEL UTAMA (DIKEMBALIKAN KE FORMAT ASLI ANDA) ---
+    tbody.innerHTML = dataHalamanIni.map(k => {
+        const total = Number(k.Harga || 0) + Number(k.Transport || 0);
+        const sisa = total - Number(k.DP || 0);
+        const tgl = k.Tanggal_Acara ? new Date(k.Tanggal_Acara).toLocaleDateString('id-ID', {day:'numeric', month:'short', year:'numeric'}) : '-';
+        
+        return `
+            <tr>
+                <td>
+                    <strong class="text-dark">${htmlEscape(k.Nama)}</strong>
+                    <div class="text-muted small"><i class="fa-solid fa-map-location-dot me-1"></i>${htmlEscape(k.Alamat)}</div>
+                </td>
+                <td class="small fw-semibold text-secondary">${tgl}</td>
+                <td><span class="badge bg-light text-dark border">${htmlEscape(k.Paket)}</span></td>
+                <td class="fw-bold ${sisa > 0 ? 'text-danger' : 'text-success'}">Rp ${sisa.toLocaleString('id-ID')}</td>
+                <td class="text-center">
+                    <div class="btn-group btn-group-sm">
+                        <button class="btn btn-dark" onclick="showKlienDetail('${k.ID}')" title="Lihat Rincian Detail">
+                            <i class="fa-solid fa-eye"></i>
+                        </button>
+                        <button class="btn btn-warning" onclick="editKlien('${k.ID}')" title="Ubah Data Klien">
+                            <i class="fa-solid fa-pen-to-square"></i>
+                        </button>
+                        <button class="btn btn-danger" onclick="hapusKlien('${k.ID}')" title="Hapus Klien">
+                            <i class="fa-solid fa-trash"></i>
+                        </button>
+                    </div>
+                </td>
+            </tr>
+        `;
+    }).join('');
+
+    // Perbarui info teks pagination
+    if (infoContainer) {
+        infoContainer.innerText = `Showing ${startIndex + 1} to ${endIndex} of ${totalEntries} entries`;
+    }
+
+    // Perbarui tombol kontrol pagination
+    if (buttonsContainer) {
+        let htmlTombol = "";
+        
+        // Tombol Previous
+        htmlTombol += `
+            <li class="page-item ${currentKlienPage === 1 ? 'disabled' : ''}">
+                <button class="page-link" onclick="changeKlienPage(${currentKlienPage - 1})">
+                    <i class="fa-solid fa-angle-left"></i>
+                </button>
+            </li>
+        `;
+
+        // Angka Halaman
+        for (let i = 1; i <= totalPages; i++) {
+            htmlTombol += `
+                <li class="page-item ${currentKlienPage === i ? 'active' : ''}">
+                    <button class="page-link" onclick="changeKlienPage(${i})">${i}</button>
+                </li>
+            `;
+        }
+
+        // Tombol Next
+        htmlTombol += `
+            <li class="page-item ${currentKlienPage === totalPages ? 'disabled' : ''}">
+                <button class="page-link" onclick="changeKlienPage(${currentKlienPage + 1})">
+                    <i class="fa-solid fa-angle-right"></i>
+                </button>
+            </li>
+        `;
+        buttonsContainer.innerHTML = htmlTombol;
+    }
+}
 
         function renderVendorCheckboxes() {
             const container = document.getElementById('vendorCheckboxesContainer');
