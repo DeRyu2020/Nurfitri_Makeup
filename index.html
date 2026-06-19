@@ -1129,30 +1129,43 @@
         }
 
         function editKlien(id) {
-            const k = appState.klien.find(item => item.ID === id);
-            if (!k) return;
+    const k = appState.klien.find(item => item.ID === id);
+    if (!k) return;
 
-            document.getElementById('klienId').value = k.ID;
-            document.getElementById('klienNama').value = k.Nama;
-            document.getElementById('klienAlamat').value = k.Alamat;
-            document.getElementById('klienWa').value = k.No_Whatsapp;
-            if(k.Tanggal_Acara) {
-                document.getElementById('klienTanggal').value = k.Tanggal_Acara.substring(0, 10);
-            }
-            document.getElementById('klienPaket').value = k.Paket;
-            document.getElementById('klienHarga').value = k.Harga;
-            document.getElementById('klienTransport').value = k.Transport;
-            document.getElementById('klienDp').value = k.DP;
-            document.getElementById('klienCatatan').value = k.Catatan;
+    // Mengisi input dasar
+    document.getElementById('klienId').value = k.ID;
+    document.getElementById('klienNama').value = k.Nama;
+    document.getElementById('klienAlamat').value = k.Alamat;
+    document.getElementById('klienWa').value = k.No_Whatsapp;
 
-            document.querySelectorAll('.client-vendor-cb').forEach(cb => {
-                cb.checked = k.Vendor && k.Vendor.split(', ').includes(cb.value);
-            });
+    // --- PERBAIKAN TOTAL TANGGAL ---
+    // Kita pastikan formatnya YYYY-MM-DD tanpa diproses sebagai objek Date
+    // Jika k.Tanggal_Acara adalah "2026-06-19T00:00:00Z", 
+    // substring(0, 10) akan menghasilkan "2026-06-19" (aman dari timezone)
+    if (k.Tanggal_Acara) {
+        const tglString = String(k.Tanggal_Acara);
+        document.getElementById('klienTanggal').value = tglString.substring(0, 10);
+    } else {
+        document.getElementById('klienTanggal').value = '';
+    }
+    // -------------------------------
 
-            document.getElementById('formKlienHeader').innerText = "Ubah Data Klien";
-            document.getElementById('btnSubmitKlien').innerText = "Perbarui Klien";
-            document.getElementById('klienNama').focus();
-        }
+    document.getElementById('klienPaket').value = k.Paket;
+    document.getElementById('klienHarga').value = k.Harga;
+    document.getElementById('klienTransport').value = k.Transport;
+    document.getElementById('klienDp').value = k.DP;
+    document.getElementById('klienCatatan').value = k.Catatan;
+
+    // Mengisi checkbox vendor
+    document.querySelectorAll('.client-vendor-cb').forEach(cb => {
+        cb.checked = k.Vendor && k.Vendor.split(', ').includes(cb.value);
+    });
+
+    // Mengatur header dan fokus
+    document.getElementById('formKlienHeader').innerText = "Ubah Data Klien";
+    document.getElementById('btnSubmitKlien').innerText = "Perbarui Klien";
+    document.getElementById('klienNama').focus();
+}
 
         function hapusKlien(id) {
             if (!confirm("Apakah Anda yakin ingin menghapus data klien ini beserta seluruh checklist attire terkait?")) return;
@@ -1346,18 +1359,23 @@
         }
 
         function editVendor(id) {
-            const v = appState.vendor.find(item => item.ID === id);
-            if (!v) return;
+    const v = appState.vendor.find(item => item.ID === id);
+    if (!v) return;
 
-            document.getElementById('vendorId').value = v.ID;
-            document.getElementById('vendorNama').value = v.Nama_Vendor;
-            document.getElementById('vendorBidang').value = v.Bidang;
-            document.getElementById('vendorWa').value = v.Whatsapp;
+    // --- TAMBAHKAN BARIS INI UNTUK DEBUG ---
+    console.log("Isi data vendor:", v); 
+    // ---------------------------------------
 
-            document.getElementById('formVendorHeader').innerText = "Ubah Data Vendor";
-            document.getElementById('btnSubmitVendor').innerText = "Perbarui Vendor";
-            document.getElementById('vendorNama').focus();
-        }
+    document.getElementById('vendorId').value = v.ID;
+    document.getElementById('vendorNama').value = v.Nama_Vendor;
+    document.getElementById('vendorBidang').value = v.Bidang;
+    
+    // Gunakan nama properti yang muncul di Console
+    document.getElementById('vendorWa').value = v.WhatsApp || ""; 
+
+    document.getElementById('formVendorHeader').innerText = "Ubah Data Vendor";
+    document.getElementById('btnSubmitVendor').innerText = "Perbarui Vendor";
+}
 
         function hapusVendor(id) {
             if (!confirm("Hapus mitra rekanan vendor ini? (Pilihan checklist di form klien otomatis terhapus)")) return;
