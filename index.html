@@ -52,7 +52,7 @@
             align-items: center;
         }
         
-        /* --- CSS ATURAN CETAK INVOICE --- */
+        /* --- CSS ATURAN CETAK INVOICE & LAPORAN --- */
         @media print {
             .no-print {
                 display: none !important;
@@ -148,6 +148,8 @@
             </div>
         </div>
     </div>
+
+    <div id="printView" class="d-none container my-4"></div>
 
     <div class="no-print">
         <nav class="navbar navbar-expand-lg navbar-dark bg-dark">
@@ -1132,23 +1134,17 @@
     const k = appState.klien.find(item => item.ID === id);
     if (!k) return;
 
-    // Mengisi input dasar
     document.getElementById('klienId').value = k.ID;
     document.getElementById('klienNama').value = k.Nama;
     document.getElementById('klienAlamat').value = k.Alamat;
     document.getElementById('klienWa').value = k.No_Whatsapp;
 
-    // --- PERBAIKAN TOTAL TANGGAL ---
-    // Kita pastikan formatnya YYYY-MM-DD tanpa diproses sebagai objek Date
-    // Jika k.Tanggal_Acara adalah "2026-06-19T00:00:00Z", 
-    // substring(0, 10) akan menghasilkan "2026-06-19" (aman dari timezone)
     if (k.Tanggal_Acara) {
         const tglString = String(k.Tanggal_Acara);
         document.getElementById('klienTanggal').value = tglString.substring(0, 10);
     } else {
         document.getElementById('klienTanggal').value = '';
     }
-    // -------------------------------
 
     document.getElementById('klienPaket').value = k.Paket;
     document.getElementById('klienHarga').value = k.Harga;
@@ -1161,7 +1157,6 @@
         cb.checked = k.Vendor && k.Vendor.split(', ').includes(cb.value);
     });
 
-    // Mengatur header dan fokus
     document.getElementById('formKlienHeader').innerText = "Ubah Data Klien";
     document.getElementById('btnSubmitKlien').innerText = "Perbarui Klien";
     document.getElementById('klienNama').focus();
@@ -1285,6 +1280,13 @@
             document.getElementById('invDP').innerText = "- Rp " + dp.toLocaleString('id-ID');
             document.getElementById('invSisa').innerText = "Rp " + sisa.toLocaleString('id-ID');
 
+            // Set state untuk print invoice (hide attire print)
+            document.getElementById('printView').classList.remove('print-only');
+            document.getElementById('printView').classList.add('d-none');
+            
+            document.getElementById('invoicePrintView').classList.remove('d-none');
+            document.getElementById('invoicePrintView').classList.add('print-only');
+
             setTimeout(() => {
                 window.print();
             }, 500);
@@ -1359,23 +1361,17 @@
         }
 
         function editVendor(id) {
-    const v = appState.vendor.find(item => item.ID === id);
-    if (!v) return;
+            const v = appState.vendor.find(item => item.ID === id);
+            if (!v) return;
 
-    // --- TAMBAHKAN BARIS INI UNTUK DEBUG ---
-    console.log("Isi data vendor:", v); 
-    // ---------------------------------------
+            document.getElementById('vendorId').value = v.ID;
+            document.getElementById('vendorNama').value = v.Nama_Vendor;
+            document.getElementById('vendorBidang').value = v.Bidang;
+            document.getElementById('vendorWa').value = v.WhatsApp || ""; 
 
-    document.getElementById('vendorId').value = v.ID;
-    document.getElementById('vendorNama').value = v.Nama_Vendor;
-    document.getElementById('vendorBidang').value = v.Bidang;
-    
-    // Gunakan nama properti yang muncul di Console
-    document.getElementById('vendorWa').value = v.WhatsApp || ""; 
-
-    document.getElementById('formVendorHeader').innerText = "Ubah Data Vendor";
-    document.getElementById('btnSubmitVendor').innerText = "Perbarui Vendor";
-}
+            document.getElementById('formVendorHeader').innerText = "Ubah Data Vendor";
+            document.getElementById('btnSubmitVendor').innerText = "Perbarui Vendor";
+        }
 
         function hapusVendor(id) {
             if (!confirm("Hapus mitra rekanan vendor ini? (Pilihan checklist di form klien otomatis terhapus)")) return;
@@ -1542,6 +1538,9 @@
                                 <a href="https://wa.me/${cleanKlienWA}" target="_blank" class="btn btn-sm btn-outline-success border-0 px-2 py-1" title="Hubungi via WhatsApp">
                                     <i class="fa-brands fa-whatsapp fs-5"></i>
                                 </a>
+                                <button class="btn btn-sm btn-outline-primary border-0 px-2 py-1" onclick="cetakLaporanAttire('${k.ID}')" title="Print Laporan Attire">
+                                    <i class="fa-solid fa-list-check"></i>
+                                </button>
                             </div>
                         </div>
                     `;
@@ -1662,6 +1661,114 @@
             .catch(err => alert("Gagal menyimpan checklist attire: " + err))
             .finally(() => showLoading(false));
         }
+
+// FUNGSI PRINT ATTIRE DIPERBARUI (Menggunakan appState, bukan database)
+function cetakLaporanAttire(idKlien) {
+    const klien = appState.klien.find(k => k.ID === idKlien);
+    if (!klien) return;
+
+    // AMBIL DATA ATTIRE BERDASARKAN ID KLIEN
+    // Sesuaikan nama key properti (ID_Klien atau id_klien) sesuai template state aplikasi Anda
+    const attire = appState.attire.find(a => a.ID_Klien === idKlien || a.id_klien === idKlien) || {};
+
+    const printView = document.getElementById('printView');
+    if (!printView) {
+        console.error("Elemen printView tidak ditemukan!");
+        return;
+    }
+    
+    // Format konten laporan attire
+    let html = `
+        <div class="p-4">
+            <h3 class="text-center fw-bold">Daftar Kelengkapan Attire</h3>
+            <h5 class="text-center">${htmlEscape(klien.Nama)}</h5>
+            <hr>
+            <p><strong>Tanggal Acara:</strong> ${klien.Tanggal_Acara ? new Date(klien.Tanggal_Acara).toLocaleDateString('id-ID', {day:'numeric', month:'long', year:'numeric'}) : '-'}</p>
+            <table class="table table-bordered">
+                <tr>
+                    <td class="field-label" style="width: 30%;">Paket Terpilih</td>
+                    <td>${klien.Paket || '-'}</td>
+                </tr>
+                
+                <tr style="background-color: #f8f9fa; font-weight: bold; text-align: center;">
+                    <td colspan="2" style="padding: 6px;">Rincian Busana Utama</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Pengantin Wanita</td>
+                    <td>${attire.Pengantin_Wanita || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Pengantin Pria</td>
+                    <td>${attire.Pengantin_Pria || '-'}</td>
+                </tr>
+                
+                <tr style="background-color: #f8f9fa; font-weight: bold; text-align: center;">
+                    <td colspan="2" style="padding: 6px;">Busana Keluarga & Pendamping</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Ibu Pengantin Wanita</td>
+                    <td>${attire.Ibu_Pengantin_Wanita || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Bapak Pengantin Wanita</td>
+                    <td>${attire.Bapak_Pengantin_Wanita || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Ibu Pengantin Pria</td>
+                    <td>${attire.Ibu_Pengantin_Pria || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Bapak Pengantin Pria</td>
+                    <td>${attire.Bapak_Pengantin_Pria || '-'}</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Pager Ayu & Pager Bagus</td>
+                    <td>Ayu: ${attire.Jumlah_Pager_Ayu || '0'} | Bagus: ${attire.Jumlah_Pager_Bagus || '0'}</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Makeup Tambahan</td>
+                    <td>${attire.Jumlah_Makeup_Tambahan || '0'} Orang</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Aksesoris Tambahan</td>
+                    <td>Payung: ${attire.Payung || '-'} | Banner: ${attire.Banner || '-'}</td>
+                </tr>
+                
+                <tr style="background-color: #f8f9fa; font-weight: bold; text-align: center;">
+                    <td colspan="2" style="padding: 6px;">Catatan Tambahan</td>
+                </tr>
+                <tr>
+                    <td class="field-label">Catatan Khusus Lapangan</td>
+                    <td>${attire.Catatan_Tambahan || '-'}</td>
+                </tr>
+            </table>
+        </div>
+    `;
+
+    printView.innerHTML = html;
+    
+    // Validasi element invoicePrintView sebelum manipulasi class
+    const invoicePrintView = document.getElementById('invoicePrintView');
+    if (invoicePrintView) {
+        invoicePrintView.classList.remove('print-only');
+        invoicePrintView.classList.add('d-none');
+    }
+    
+    printView.classList.remove('d-none');
+    printView.classList.add('print-only');
+
+    setTimeout(() => {
+        window.print();
+        
+        // Kembalikan ke state awal setelah window print terbuka
+        if (invoicePrintView) {
+            invoicePrintView.classList.add('print-only');
+            invoicePrintView.classList.remove('d-none');
+        }
+        printView.classList.add('d-none');
+        printView.classList.remove('print-only');
+    }, 500);
+}
 
         // --- MANAJEMEN MENU 4: TIM MAKEUP (PENUGASAN COMPATIBLE DENGAN FILTER) ---
         function resetTimPageAndRender() {
@@ -1990,7 +2097,6 @@
             return clean;
         }
 
-        // Helper tambahan penanggalan
         function formatDateIndo(dateStr) {
             if(!dateStr) return "-";
             const d = new Date(dateStr);
