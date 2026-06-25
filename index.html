@@ -1667,11 +1667,12 @@ function cetakLaporanAttire(idKlien) {
     const klien = appState.klien.find(k => k.ID === idKlien);
     if (!klien) return;
 
-    // AMBIL DATA ATTIRE BERDASARKAN ID KLIEN
-    // Sesuaikan nama key properti (ID_Klien atau id_klien) sesuai template state aplikasi Anda
+    // Ambil data attire berdasarkan ID Klien
     const attire = appState.attire.find(a => a.ID_Klien === idKlien || a.id_klien === idKlien) || {};
 
     const printView = document.getElementById('printView');
+    const invoicePrintView = document.getElementById('invoicePrintView');
+    
     if (!printView) {
         console.error("Elemen printView tidak ditemukan!");
         return;
@@ -1747,27 +1748,30 @@ function cetakLaporanAttire(idKlien) {
 
     printView.innerHTML = html;
     
-    // Validasi element invoicePrintView sebelum manipulasi class
-    const invoicePrintView = document.getElementById('invoicePrintView');
+    // --- PROTEKSI UNTUK HANDPHONE ---
+    // Sembunyikan Invoice secara total & paksa, lalu tampilkan kontainer Attire
     if (invoicePrintView) {
+        invoicePrintView.style.setProperty('display', 'none', 'important');
         invoicePrintView.classList.remove('print-only');
-        invoicePrintView.classList.add('d-none');
     }
     
+    printView.style.setProperty('display', 'block', 'important');
     printView.classList.remove('d-none');
     printView.classList.add('print-only');
 
+    // Berikan jeda sedikit lebih lama (800ms) agar browser HP selesai me-render CSS baru
     setTimeout(() => {
         window.print();
         
-        // Kembalikan ke state awal setelah window print terbuka
+        // Kembalikan state tampilan normal setelah pop-up cetak HP tertutup
         if (invoicePrintView) {
+            invoicePrintView.style.removeProperty('display');
             invoicePrintView.classList.add('print-only');
-            invoicePrintView.classList.remove('d-none');
         }
+        printView.style.removeProperty('display');
         printView.classList.add('d-none');
         printView.classList.remove('print-only');
-    }, 500);
+    }, 800);
 }
 
         // --- MANAJEMEN MENU 4: TIM MAKEUP (PENUGASAN COMPATIBLE DENGAN FILTER) ---
