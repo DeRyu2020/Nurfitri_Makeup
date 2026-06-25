@@ -1746,32 +1746,42 @@ function cetakLaporanAttire(idKlien) {
         </div>
     `;
 
-    printView.innerHTML = html;
-    
-    // --- PROTEKSI UNTUK HANDPHONE ---
-    // Sembunyikan Invoice secara total & paksa, lalu tampilkan kontainer Attire
+    // Sediakan variabel cadangan untuk menyimpan konten asli Invoice
+    let backupInvoiceHtml = "";
+
+    // --- STRATEGI TOTAL ISOLASI UNTUK HP ---
+    // Jika elemen invoice ada, kita amankan isinya lalu KOSONGKAN elemennya dari layar cetak
     if (invoicePrintView) {
+        backupInvoiceHtml = invoicePrintView.innerHTML;
+        invoicePrintView.innerHTML = ""; // Benar-benar dikosongkan agar tidak bisa terbaca browser HP
         invoicePrintView.style.setProperty('display', 'none', 'important');
         invoicePrintView.classList.remove('print-only');
     }
-    
+
+    // Pasang HTML Attire dan paksa tampil
+    printView.innerHTML = html;
     printView.style.setProperty('display', 'block', 'important');
     printView.classList.remove('d-none');
     printView.classList.add('print-only');
 
-    // Berikan jeda sedikit lebih lama (800ms) agar browser HP selesai me-render CSS baru
+    // Berikan jeda agar browser HP memproses DOM yang kosong
     setTimeout(() => {
         window.print();
         
-        // Kembalikan state tampilan normal setelah pop-up cetak HP tertutup
+        // --- PROSES PEMULIHAN RE-RENDER ---
+        // Setelah pop-up printer HP tertutup, kembalikan isi Invoice seperti semula
         if (invoicePrintView) {
+            invoicePrintView.innerHTML = backupInvoiceHtml; // Isi kembali konten invoice
             invoicePrintView.style.removeProperty('display');
             invoicePrintView.classList.add('print-only');
         }
+        
+        // Sembunyikan kembali view attire
         printView.style.removeProperty('display');
         printView.classList.add('d-none');
         printView.classList.remove('print-only');
-    }, 800);
+        printView.innerHTML = "";
+    }, 600);
 }
 
         // --- MANAJEMEN MENU 4: TIM MAKEUP (PENUGASAN COMPATIBLE DENGAN FILTER) ---
